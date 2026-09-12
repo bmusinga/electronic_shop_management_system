@@ -15,6 +15,10 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!auth) {
+      const timeout = setTimeout(() => setLoading(false), 0);
+      return () => clearTimeout(timeout);
+    }
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
@@ -23,10 +27,16 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signIn = useCallback(async (email, password) => {
+    if (!auth) {
+      throw new Error("Firebase is not configured. Please set the NEXT_PUBLIC_FIREBASE_* environment variables.");
+    }
     return signInWithEmailAndPassword(auth, email, password);
   }, []);
 
   const signOut = useCallback(async () => {
+    if (!auth) {
+      return;
+    }
     return firebaseSignOut(auth);
   }, []);
 
