@@ -103,16 +103,10 @@ export default function ProductsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
-      <section className="bg-slate-900 dark:bg-slate-950 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl font-bold text-white mb-4">Our Products</h1>
-          <p className="text-lg text-slate-300">
-            Browse our complete collection of premium electronics
-          </p>
-        </div>
-      </section>
-
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-6 [text-shadow:0_1px_0_rgba(255,255,255,0.7)] dark:[text-shadow:0_2px_4px_rgba(0,0,0,0.45)]">
+          Our Products
+        </h1>
         <div className="flex flex-col md:flex-row gap-4 mb-8">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />

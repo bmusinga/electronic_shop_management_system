@@ -35,21 +35,15 @@ export default function ContactPage() {
 
   return (
     <main>
-      {/* Header */}
-      <section className="bg-slate-900 dark:bg-slate-950 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4">
-            Contact Us
-          </h1>
-          <p className="text-xl text-slate-300">
-            Get in touch with our team
-          </p>
-        </div>
-      </section>
-
       {/* Main Content */}
       <section className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-2 text-center [text-shadow:0_1px_0_rgba(255,255,255,0.7)] dark:[text-shadow:0_2px_4px_rgba(0,0,0,0.45)]">
+            Talk to us
+          </h1>
+          <p className="text-lg text-slate-500 dark:text-slate-400 mb-10 text-center">
+            Get in touch with our team
+          </p>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             {/* Left Column - Contact Form */}
             <div>

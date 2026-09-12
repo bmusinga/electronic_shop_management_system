@@ -52,18 +52,6 @@ const values = [
 export default function AboutPage() {
   return (
     <main>
-      {/* Hero Section */}
-      <section className="bg-slate-900 dark:bg-slate-950 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4">
-            About Voltex
-          </h1>
-          <p className="text-xl text-slate-300">
-            Your trusted partner in technology since 2015
-          </p>
-        </div>
-      </section>
-
       {/* Our Story Section */}
       <section className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
