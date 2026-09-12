@@ -12,7 +12,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@next/swc-win32-x64-msvc": "^16.3.4",
     "embla-carousel-react": "^8.6.0",
     "firebase": "^12.18.0",
     "lightningcss": "^1.33.0",
