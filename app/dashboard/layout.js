@@ -23,6 +23,12 @@ export default function DashboardLayout({ children }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace("/login");
+    }
+  }, [loading, user, router]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-bg-light dark:bg-bg-dark">
@@ -32,7 +38,6 @@ export default function DashboardLayout({ children }) {
   }
 
   if (!user) {
-    router.push("/login");
     return null;
   }
 
