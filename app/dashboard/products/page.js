@@ -1,65 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Plus, Trash2, Edit, Search, X, AlertCircle } from "lucide-react";
-
-const initialProducts = [
-  {
-    id: "1",
-    name: "iPhone 15 Pro",
-    category: "Smartphones",
-    price: 1199,
-    stock: 45,
-    image:
-      "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=300&fit=crop",
-  },
-  {
-    id: "2",
-    name: "Samsung Galaxy S24",
-    category: "Smartphones",
-    price: 999,
-    stock: 32,
-    image:
-      "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=400&h=300&fit=crop",
-  },
-  {
-    id: "3",
-    name: 'MacBook Pro 14"',
-    category: "Laptops",
-    price: 1999,
-    stock: 18,
-    image:
-      "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=300&fit=crop",
-  },
-  {
-    id: "4",
-    name: "Sony WH-1000XM5",
-    category: "Audio",
-    price: 349,
-    stock: 8,
-    image:
-      "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop",
-  },
-  {
-    id: "5",
-    name: "AirPods Pro 2",
-    category: "Audio",
-    price: 249,
-    stock: 56,
-    image:
-      "https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=400&h=300&fit=crop",
-  },
-  {
-    id: "6",
-    name: "iPad Air",
-    category: "Accessories",
-    price: 599,
-    stock: 0,
-    image:
-      "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=400&h=300&fit=crop",
-  },
-];
+import {
+  addProduct,
+  updateProduct,
+  removeProduct,
+  subscribeToProducts,
+} from "@/lib/firestore";
+import { getStockStatus, getStockBadgeClass } from "@/lib/stock";
 
 const categories = ["Smartphones", "Laptops", "Audio", "Accessories", "Wearables"];
 
@@ -73,28 +23,44 @@ const emptyForm = {
   image: "",
 };
 
-function getStockStatus(stock) {
-  if (stock <= 0) return "Out of Stock";
-  if (stock <= 10) return "Low Stock";
-  return "In Stock";
-}
-
-function getStatusBadgeClass(status) {
-  if (status === "In Stock") {
-    return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400";
-  }
-  if (status === "Low Stock") {
-    return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
-  }
-  return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
+function toProductData(form) {
+  return {
+    name: form.name.trim(),
+    description: form.description.trim(),
+    price: Number(form.price),
+    category: form.category,
+    stock: Number(form.stock),
+    image: form.image.trim(),
+  };
 }
 
 export default function DashboardProductsPage() {
-  const [products, setProducts] = useState(initialProducts);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [formError, setFormError] = useState("");
+
+  useEffect(() => {
+    const unsubscribe = subscribeToProducts(
+      (items) => {
+        setProducts(items);
+        setLoading(false);
+        setLoadError("");
+      },
+      () => {
+        setLoadError(
+          "Could not load products. Make sure the Firestore database is created and read rules are enabled."
+        );
+        setLoading(false);
+      }
+    );
+    return unsubscribe;
+  }, []);
 
   const filteredProducts = products.filter((product) =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -104,6 +70,7 @@ export default function DashboardProductsPage() {
 
   function openAddModal() {
     setForm(emptyForm);
+    setFormError("");
     setIsModalOpen(true);
   }
 
@@ -117,48 +84,46 @@ export default function DashboardProductsPage() {
       stock: product.stock,
       image: product.image,
     });
+    setFormError("");
     setIsModalOpen(true);
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    if (form.id) {
-      setProducts(
-        products.map((product) =>
-          product.id === form.id
-            ? {
-                ...product,
-                name: form.name,
-                description: form.description,
-                price: Number(form.price),
-                category: form.category,
-                stock: Number(form.stock),
-                image: form.image,
-              }
-            : product
-        )
-      );
-    } else {
-      setProducts([
-        ...products,
-        {
-          id: Date.now().toString(),
-          name: form.name,
-          description: form.description,
-          price: Number(form.price),
-          category: form.category,
-          stock: Number(form.stock),
-          image: form.image,
-        },
-      ]);
+    setFormError("");
+    setSaving(true);
+    try {
+      if (form.id) {
+        await updateProduct(form.id, toProductData(form));
+      } else {
+        await addProduct(toProductData(form));
+      }
+      setIsModalOpen(false);
+      setForm(emptyForm);
+    } catch (err) {
+      setFormError("Could not save the product. Check your Firestore write rules and try again.");
+    } finally {
+      setSaving(false);
     }
-    setIsModalOpen(false);
-    setForm(emptyForm);
   }
 
-  function handleDelete() {
-    setProducts(products.filter((product) => product.id !== deleteId));
-    setDeleteId(null);
+  async function handleDelete() {
+    setFormError("");
+    try {
+      await removeProduct(deleteId);
+      setDeleteId(null);
+    } catch (err) {
+      setLoadError("Could not delete the product. Check your Firestore write rules and try again.");
+      setDeleteId(null);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="w-10 h-10 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   return (
@@ -180,6 +145,13 @@ export default function DashboardProductsPage() {
           Add Product
         </button>
       </div>
+
+      {loadError && (
+        <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl mb-4">
+          <AlertCircle className="w-5 h-5 text-danger shrink-0 mt-0.5" />
+          <p className="text-sm text-red-700 dark:text-red-400">{loadError}</p>
+        </div>
+      )}
 
       <div className="relative mb-4 max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted-light dark:text-text-muted-dark" />
@@ -277,7 +249,7 @@ export default function DashboardProductsPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${getStatusBadgeClass(
+                        className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${getStockBadgeClass(
                           status
                         )}`}
                       >
@@ -330,6 +302,13 @@ export default function DashboardProductsPage() {
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {formError && (
+              <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl mb-4">
+                <AlertCircle className="w-5 h-5 text-danger shrink-0 mt-0.5" />
+                <p className="text-sm text-red-700 dark:text-red-400">{formError}</p>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -434,9 +413,10 @@ export default function DashboardProductsPage() {
                 </button>
                 <button
                   type="submit"
+                  disabled={saving}
                   className="px-4 py-2.5 text-sm font-medium sk-btn-primary"
                 >
-                  {form.id ? "Save Changes" : "Add Product"}
+                  {saving ? "Saving..." : form.id ? "Save Changes" : "Add Product"}
                 </button>
               </div>
             </form>

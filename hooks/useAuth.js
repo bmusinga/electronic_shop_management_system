@@ -5,6 +5,9 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
+  updatePassword,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
@@ -40,8 +43,22 @@ export function AuthProvider({ children }) {
     return firebaseSignOut(auth);
   }, []);
 
+  const changePassword = useCallback(
+    async (currentPassword, newPassword) => {
+      if (!auth || !user) {
+        throw new Error(
+          "You must be signed in to change your password."
+        );
+      }
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+      await updatePassword(user, newPassword);
+    },
+    [user]
+  );
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signOut, changePassword }}>
       {children}
     </AuthContext.Provider>
   );

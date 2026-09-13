@@ -9,23 +9,31 @@ import {
   Eye,
   EyeOff,
   CheckCircle,
+  AlertCircle,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { getSettingsDoc, saveSettingsDoc } from "@/lib/firestore";
 
 export default function SettingsPage() {
-  const [showSuccess, setShowSuccess] = useState(false);
+  const { user, changePassword } = useAuth();
+
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState(null);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [savingStore, setSavingStore] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
 
   const [profile, setProfile] = useState({
-    fullName: "James Mitchell",
-    email: "james@voltex.com",
-    phone: "+1 (555) 123-4567",
+    fullName: "",
+    email: "",
+    phone: "",
   });
 
   const [store, setStore] = useState({
-    storeName: "Voltex Electronics",
-    description:
-      "Voltex Electronics is a leading electronics retailer offering the latest in consumer electronics, home appliances, and cutting-edge technology. With over a decade of experience, we provide top-quality products and exceptional customer service.",
-    contactEmail: "info@voltex.com",
-    contactPhone: "+1 (555) 123-4567",
+    storeName: "",
+    description: "",
+    contactEmail: "",
+    contactPhone: "",
   });
 
   const [passwords, setPasswords] = useState({
@@ -38,16 +46,116 @@ export default function SettingsPage() {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const triggerSuccess = () => {
-    setShowSuccess(true);
-  };
+  useEffect(() => {
+    let active = true;
+    getSettingsDoc()
+      .then((data) => {
+        if (!active) return;
+        if (data) {
+          setProfile({
+            fullName: data.fullName || "",
+            email: data.email || user?.email || "",
+            phone: data.phone || "",
+          });
+          setStore({
+            storeName: data.storeName || "",
+            description: data.description || "",
+            contactEmail: data.contactEmail || "",
+            contactPhone: data.contactPhone || "",
+          });
+        } else {
+          setProfile((prev) => ({ ...prev, email: user?.email || "" }));
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        if (active) {
+          setProfile((prev) => ({ ...prev, email: user?.email || "" }));
+          setLoading(false);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [user?.email]);
 
   useEffect(() => {
-    if (showSuccess) {
-      const timer = setTimeout(() => setShowSuccess(false), 3000);
-      return () => clearTimeout(timer);
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  const flash = (kind, message) => setToast({ kind, message });
+
+  async function handleSaveProfile() {
+    setSavingProfile(true);
+    try {
+      await saveSettingsDoc({
+        fullName: profile.fullName.trim(),
+        email: profile.email.trim(),
+        phone: profile.phone.trim(),
+      });
+      flash("success", "Profile saved successfully");
+    } catch {
+      flash("error", "Could not save profile. Check your Firestore write rules.");
+    } finally {
+      setSavingProfile(false);
     }
-  }, [showSuccess]);
+  }
+
+  async function handleSaveStore() {
+    setSavingStore(true);
+    try {
+      await saveSettingsDoc({
+        storeName: store.storeName.trim(),
+        description: store.description.trim(),
+        contactEmail: store.contactEmail.trim(),
+        contactPhone: store.contactPhone.trim(),
+      });
+      flash("success", "Store settings saved successfully");
+    } catch {
+      flash("error", "Could not save store settings. Check your Firestore write rules.");
+    } finally {
+      setSavingStore(false);
+    }
+  }
+
+  async function handleChangePassword() {
+    if (passwords.new !== passwords.confirm) {
+      flash("error", "New password and confirmation do not match.");
+      return;
+    }
+    if (passwords.new.length < 6) {
+      flash("error", "New password must be at least 6 characters.");
+      return;
+    }
+    if (!passwords.current || !passwords.new) {
+      flash("error", "Please fill in all password fields.");
+      return;
+    }
+    setSavingPassword(true);
+    try {
+      await changePassword(passwords.current, passwords.new);
+      setPasswords({ current: "", new: "", confirm: "" });
+      flash("success", "Password updated successfully");
+    } catch (err) {
+      if (err.code === "auth/wrong-password") {
+        flash("error", "Current password is incorrect.");
+      } else {
+        flash("error", "Could not update password. Please try again.");
+      }
+    } finally {
+      setSavingPassword(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] bg-slate-50 dark:bg-slate-900 p-4 sm:p-6 lg:p-8">
+        <div className="w-10 h-10 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-4 sm:p-6 lg:p-8">
@@ -62,12 +170,28 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        {/* Success Toast */}
-        {showSuccess && (
-          <div className="fixed top-6 right-6 z-50 flex items-center gap-2 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-4 py-3 shadow-sm">
-            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-            <span className="text-sm font-medium text-green-700 dark:text-green-400">
-              Settings saved successfully
+        {/* Toast */}
+        {toast && (
+          <div
+            className={`fixed top-6 right-6 z-50 flex items-center gap-2 rounded-lg border px-4 py-3 shadow-sm ${
+              toast.kind === "success"
+                ? "border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20"
+                : "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20"
+            }`}
+          >
+            {toast.kind === "success" ? (
+              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+            ) : (
+              <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+            )}
+            <span
+              className={`text-sm font-medium ${
+                toast.kind === "success"
+                  ? "text-green-700 dark:text-green-400"
+                  : "text-red-700 dark:text-red-400"
+              }`}
+            >
+              {toast.message}
             </span>
           </div>
         )}
@@ -127,11 +251,12 @@ export default function SettingsPage() {
 
           <div className="mt-6">
             <button
-              onClick={triggerSuccess}
+              onClick={handleSaveProfile}
+              disabled={savingProfile}
               className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium sk-btn-primary"
             >
               <Save className="h-4 w-4" />
-              Save Changes
+              {savingProfile ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </div>
@@ -158,6 +283,7 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setStore({ ...store, storeName: e.target.value })
                 }
+                placeholder="My Store"
                 className="w-full rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 sk-input"
               />
             </div>
@@ -172,6 +298,7 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setStore({ ...store, description: e.target.value })
                 }
+                placeholder="Tell customers about your store"
                 className="w-full rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 sk-input resize-none"
               />
             </div>
@@ -186,6 +313,7 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setStore({ ...store, contactEmail: e.target.value })
                 }
+                placeholder="support@example.com"
                 className="w-full rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 sk-input"
               />
             </div>
@@ -200,6 +328,7 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setStore({ ...store, contactPhone: e.target.value })
                 }
+                placeholder="+1 (555) 000-0000"
                 className="w-full rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 sk-input"
               />
             </div>
@@ -207,11 +336,12 @@ export default function SettingsPage() {
 
           <div className="mt-6">
             <button
-              onClick={triggerSuccess}
+              onClick={handleSaveStore}
+              disabled={savingStore}
               className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium sk-btn-primary"
             >
               <Save className="h-4 w-4" />
-              Save Changes
+              {savingStore ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </div>
@@ -315,11 +445,12 @@ export default function SettingsPage() {
 
           <div className="mt-6">
             <button
-              onClick={triggerSuccess}
+              onClick={handleChangePassword}
+              disabled={savingPassword}
               className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium sk-btn-primary"
             >
               <Save className="h-4 w-4" />
-              Update Password
+              {savingPassword ? "Updating..." : "Update Password"}
             </button>
           </div>
         </div>

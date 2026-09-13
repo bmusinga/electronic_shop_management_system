@@ -4,72 +4,11 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Star, ShoppingCart } from "lucide-react";
+import { getProducts } from "@/lib/firestore";
+import { getStockStatus } from "@/lib/stock";
 
-const FALLBACK_PRODUCTS = [
-  {
-    id: 1,
-    name: "iPhone 15 Pro",
-    price: 1199,
-    description: "Latest Apple flagship with A17 Pro chip",
-    image:
-      "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=300&fit=crop",
-    stock: "In Stock",
-    rating: 4.8,
-  },
-  {
-    id: 2,
-    name: "Samsung Galaxy S24 Ultra",
-    price: 1099,
-    description: "Premium Android smartphone with S Pen",
-    image:
-      "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=400&h=300&fit=crop",
-    stock: "In Stock",
-    rating: 4.7,
-  },
-  {
-    id: 3,
-    name: 'MacBook Pro 14"',
-    price: 1999,
-    description: "M3 Pro chip, 18GB RAM, 512GB SSD",
-    image:
-      "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=300&fit=crop",
-    stock: "In Stock",
-    rating: 4.9,
-  },
-  {
-    id: 4,
-    name: "Sony WH-1000XM5",
-    price: 349,
-    description: "Industry-leading noise canceling headphones",
-    image:
-      "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop",
-    stock: "Low Stock",
-    rating: 4.6,
-  },
-  {
-    id: 5,
-    name: 'iPad Pro 12.9"',
-    price: 1099,
-    description: "M2 chip, Liquid Retina XDR display",
-    image:
-      "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=400&h=300&fit=crop",
-    stock: "In Stock",
-    rating: 4.7,
-  },
-  {
-    id: 6,
-    name: "Dell XPS 15",
-    price: 1299,
-    description: "Intel Core i7, 16GB RAM, 512GB SSD",
-    image:
-      "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400&h=300&fit=crop",
-    stock: "In Stock",
-    rating: 4.5,
-  },
-];
-
-function getStockBadgeColor(stock) {
-  switch (stock) {
+function getStockBadgeColor(status) {
+  switch (status) {
     case "In Stock":
       return "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300";
     case "Low Stock":
@@ -82,6 +21,7 @@ function getStockBadgeColor(stock) {
 }
 
 function ProductCard({ product }) {
+  const stock = getStockStatus(product.stock);
   return (
     <div className="group sk-panel overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-1px_0_rgba(15,23,42,0.06),0_10px_20px_rgba(15,23,42,0.2)]">
       <div className="m-3 mb-0 sk-panel-inset relative w-auto h-44 bg-gray-100 dark:bg-gray-700 overflow-hidden">
@@ -93,9 +33,9 @@ function ProductCard({ product }) {
           className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
         <span
-          className={`absolute top-2.5 left-2.5 text-xs font-semibold px-2.5 py-1 rounded-full sk-badge ${getStockBadgeColor(product.stock)}`}
+          className={`absolute top-2.5 left-2.5 text-xs font-semibold px-2.5 py-1 rounded-full sk-badge ${getStockBadgeColor(stock)}`}
         >
-          {product.stock}
+          {stock}
         </span>
       </div>
 
@@ -107,7 +47,7 @@ function ProductCard({ product }) {
         <div className="flex items-center gap-1 mb-2">
           <Star className="w-4 h-4 fill-amber-400 text-amber-400 drop-shadow-[0_1px_1px_rgba(0,0,0,0.2)]" />
           <span className="text-sm text-gray-600 dark:text-gray-400">
-            {product.rating}
+            {product.rating || 4.5}
           </span>
         </div>
 
@@ -132,24 +72,26 @@ function ProductCard({ product }) {
 }
 
 export default function FeaturedProducts() {
-  const [products, setProducts] = useState(FALLBACK_PRODUCTS);
+  const [products, setProducts] = useState([]);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    async function fetchProducts() {
-      try {
-        const res = await fetch("/api/products?featured=true&limit=6");
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
-            setProducts(data);
-          }
+    let active = true;
+    getProducts()
+      .then((items) => {
+        if (active) {
+          setProducts(items.slice(0, 6));
+          setLoaded(true);
         }
-      } catch {
-        // Use fallback data
-      }
-    }
-
-    fetchProducts();
+      })
+      .catch(() => {
+        if (active) {
+          setLoaded(true);
+        }
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   return (
@@ -165,11 +107,13 @@ export default function FeaturedProducts() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        {loaded && products.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            {products.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        )}
 
         <div className="text-center">
           <Link

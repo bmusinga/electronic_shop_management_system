@@ -1,101 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Search, ShoppingCart, Star, Filter } from "lucide-react";
-
-const fallbackProducts = [
-  {
-    id: "1",
-    name: "iPhone 15 Pro",
-    price: 1199,
-    category: "Smartphones",
-    description: "Latest Apple flagship with A17 Pro chip",
-    stock: "In Stock",
-    image: "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=300&fit=crop",
-  },
-  {
-    id: "2",
-    name: "Samsung Galaxy S24 Ultra",
-    price: 1099,
-    category: "Smartphones",
-    description: "Premium Android smartphone with S Pen",
-    stock: "In Stock",
-    image: "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=400&h=300&fit=crop",
-  },
-  {
-    id: "3",
-    name: 'MacBook Pro 14"',
-    price: 1999,
-    category: "Laptops",
-    description: "M3 Pro chip, 18GB RAM, 512GB SSD",
-    stock: "In Stock",
-    image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=300&fit=crop",
-  },
-  {
-    id: "4",
-    name: "Sony WH-1000XM5",
-    price: 349,
-    category: "Audio",
-    description: "Industry-leading noise canceling headphones",
-    stock: "Low Stock",
-    image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop",
-  },
-  {
-    id: "5",
-    name: 'iPad Pro 12.9"',
-    price: 1099,
-    category: "Accessories",
-    description: "M2 chip, Liquid Retina XDR display",
-    stock: "In Stock",
-    image: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=400&h=300&fit=crop",
-  },
-  {
-    id: "6",
-    name: "Dell XPS 15",
-    price: 1299,
-    category: "Laptops",
-    description: "Intel Core i7, 16GB RAM, 512GB SSD",
-    stock: "In Stock",
-    image: "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400&h=300&fit=crop",
-  },
-  {
-    id: "7",
-    name: "AirPods Pro 2",
-    price: 249,
-    category: "Audio",
-    description: "Active noise cancellation, adaptive transparency",
-    stock: "In Stock",
-    image: "https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=400&h=300&fit=crop",
-  },
-  {
-    id: "8",
-    name: "Apple Watch Series 9",
-    price: 399,
-    category: "Wearables",
-    description: "Always-On Retina display, health sensors",
-    stock: "Low Stock",
-    image: "https://images.unsplash.com/photo-1434493789847-2f02dc6ca35d?w=400&h=300&fit=crop",
-  },
-];
+import { Search, ShoppingCart, Filter } from "lucide-react";
+import { getProducts } from "@/lib/firestore";
+import { getStockStatus, getStockBadgeClass } from "@/lib/stock";
 
 const categories = ["All", "Smartphones", "Laptops", "Audio", "Accessories", "Wearables"];
 
-function getStockBadge(stock) {
-  if (stock === "In Stock") {
-    return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400";
-  }
-  if (stock === "Low Stock") {
-    return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
-  }
-  return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
-}
-
 export default function ProductsPage() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
 
-  const filteredProducts = fallbackProducts.filter((product) => {
+  useEffect(() => {
+    let active = true;
+    getProducts()
+      .then((items) => {
+        if (active) {
+          setProducts(items);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setLoading(false);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const filteredProducts = products.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = activeCategory === "All" || product.category === activeCategory;
     return matchesSearch && matchesCategory;
@@ -136,62 +74,69 @@ export default function ProductsPage() {
           ))}
         </div>
 
-        {filteredProducts.length === 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="w-10 h-10 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : filteredProducts.length === 0 ? (
           <div className="text-center py-20">
             <Filter className="w-12 h-12 text-slate-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
               No products found
             </h3>
             <p className="text-slate-500 dark:text-slate-400">
-              Try adjusting your search or filter to find what you are looking for.
+              Products you add in the dashboard will appear here.
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredProducts.map((product) => (
-              <div
-                key={product.id}
-                className="sk-panel transition-all duration-300 hover:-translate-y-1 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-1px_0_rgba(15,23,42,0.06),0_10px_20px_rgba(15,23,42,0.2)] group overflow-hidden"
-              >
-                <div className="m-3 mb-0 sk-panel-inset relative overflow-hidden">
-                  <Image
-                    src={product.image}
-                    alt={product.name}
-                    width={400}
-                    height={300}
-                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                </div>
-                <div className="p-5">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-medium px-2.5 py-1 rounded-full sk-badge bg-[#2563EB]/10 text-[#2563EB]">
-                      {product.category}
-                    </span>
-                    <span
-                      className={`text-xs font-medium px-2.5 py-1 rounded-full sk-badge ${getStockBadge(
-                        product.stock
-                      )}`}
-                    >
-                      {product.stock}
-                    </span>
+            {filteredProducts.map((product) => {
+              const status = getStockStatus(product.stock);
+              return (
+                <div
+                  key={product.id}
+                  className="sk-panel transition-all duration-300 hover:-translate-y-1 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-1px_0_rgba(15,23,42,0.06),0_10px_20px_rgba(15,23,42,0.2)] group overflow-hidden"
+                >
+                  <div className="m-3 mb-0 sk-panel-inset relative overflow-hidden">
+                    <Image
+                      src={product.image}
+                      alt={product.name}
+                      width={400}
+                      height={300}
+                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
                   </div>
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">
-                    {product.name}
-                  </h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-3 line-clamp-2">
-                    {product.description}
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xl font-bold text-slate-900 dark:text-white">
-                      ${product.price.toLocaleString()}
-                    </span>
-                    <button className="p-2.5 rounded-lg sk-btn-primary">
-                      <ShoppingCart className="w-4 h-4" />
-                    </button>
+                  <div className="p-5">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-medium px-2.5 py-1 rounded-full sk-badge bg-[#2563EB]/10 text-[#2563EB]">
+                        {product.category}
+                      </span>
+                      <span
+                        className={`text-xs font-medium px-2.5 py-1 rounded-full sk-badge ${getStockBadgeClass(
+                          status
+                        )}`}
+                      >
+                        {status}
+                      </span>
+                    </div>
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">
+                      {product.name}
+                    </h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-3 line-clamp-2">
+                      {product.description}
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xl font-bold text-slate-900 dark:text-white">
+                        ${product.price.toLocaleString()}
+                      </span>
+                      <button className="p-2.5 rounded-lg sk-btn-primary">
+                        <ShoppingCart className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>

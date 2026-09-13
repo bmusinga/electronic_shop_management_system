@@ -1,132 +1,58 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
-  DollarSign,
-  ShoppingBag,
   Package,
-  Users,
-  TrendingUp,
-  ArrowUpRight,
-  ArrowDownRight,
+  ShoppingBag,
+  AlertTriangle,
+  XCircle,
+  PackageOpen,
 } from "lucide-react";
 import {
-  AreaChart,
-  Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Cell,
 } from "recharts";
+import { subscribeToProducts } from "@/lib/firestore";
+import { getStockStatus, getStockBadgeClass } from "@/lib/stock";
 
-const revenueData = [
-  { month: "Jan", revenue: 18500 },
-  { month: "Feb", revenue: 22300 },
-  { month: "Mar", revenue: 19800 },
-  { month: "Apr", revenue: 24100 },
-  { month: "May", revenue: 27600 },
-  { month: "Jun", revenue: 25400 },
-  { month: "Jul", revenue: 29800 },
-  { month: "Aug", revenue: 31200 },
-  { month: "Sep", revenue: 28900 },
-  { month: "Oct", revenue: 33500 },
-  { month: "Nov", revenue: 35200 },
-  { month: "Dec", revenue: 38800 },
-];
-
-const recentOrders = [
+const statCards = [
   {
-    orderId: "#ORD-7892",
-    customer: "Alex Johnson",
-    product: 'MacBook Pro 16" M3',
-    amount: "$2,499.00",
-    status: "Completed",
-    date: "Dec 15, 2024",
-  },
-  {
-    orderId: "#ORD-7891",
-    customer: "Sarah Williams",
-    product: "Sony WH-1000XM5",
-    amount: "$349.99",
-    status: "Processing",
-    date: "Dec 15, 2024",
-  },
-  {
-    orderId: "#ORD-7890",
-    customer: "Michael Chen",
-    product: "Samsung Galaxy S24 Ultra",
-    amount: "$1,299.99",
-    status: "Completed",
-    date: "Dec 14, 2024",
-  },
-  {
-    orderId: "#ORD-7889",
-    customer: "Emily Davis",
-    product: 'iPad Air M2 11"',
-    amount: "$799.00",
-    status: "Pending",
-    date: "Dec 14, 2024",
-  },
-  {
-    orderId: "#ORD-7888",
-    customer: "James Wilson",
-    product: "LG OLED C3 55\" TV",
-    amount: "$1,499.99",
-    status: "Completed",
-    date: "Dec 13, 2024",
-  },
-];
-
-const stats = [
-  {
-    title: "Total Revenue",
-    value: "$124,563",
-    trend: "+12.5% from last month",
-    positive: true,
-    icon: DollarSign,
-    color: "bg-emerald-50 dark:bg-emerald-900/20",
-    iconColor: "text-emerald-600 dark:text-emerald-400",
-  },
-  {
-    title: "Total Orders",
-    value: "1,248",
-    trend: "+8.2% from last month",
-    positive: true,
-    icon: ShoppingBag,
-    color: "bg-blue-50 dark:bg-blue-900/20",
-    iconColor: "text-blue-600 dark:text-blue-400",
-  },
-  {
-    title: "Products",
-    value: "384",
-    trend: "+24 new this month",
-    positive: true,
+    key: "total",
+    title: "Total Products",
     icon: Package,
     color: "bg-blue-50 dark:bg-blue-900/20",
     iconColor: "text-blue-600 dark:text-blue-400",
   },
   {
-    title: "Active Users",
-    value: "2,456",
-    trend: "+18.1% from last month",
-    positive: true,
-    icon: Users,
+    key: "inStock",
+    title: "In Stock",
+    icon: ShoppingBag,
     color: "bg-emerald-50 dark:bg-emerald-900/20",
     iconColor: "text-emerald-600 dark:text-emerald-400",
   },
+  {
+    key: "lowStock",
+    title: "Low Stock",
+    icon: AlertTriangle,
+    color: "bg-amber-50 dark:bg-amber-900/20",
+    iconColor: "text-amber-600 dark:text-amber-400",
+  },
+  {
+    key: "outOfStock",
+    title: "Out of Stock",
+    icon: XCircle,
+    color: "bg-red-50 dark:bg-red-900/20",
+    iconColor: "text-red-600 dark:text-red-400",
+  },
 ];
 
-const statusStyles = {
-  Completed:
-    "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
-  Processing:
-    "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-  Pending:
-    "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-};
-
-function CustomTooltip({ active, payload, label }) {
+function CategoryTooltip({ active, payload, label }) {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg p-3">
@@ -134,7 +60,7 @@ function CustomTooltip({ active, payload, label }) {
           {label}
         </p>
         <p className="text-lg font-semibold text-slate-900 dark:text-white">
-          ${payload[0].value.toLocaleString()}
+          {payload[0].value} product{payload[0].value === 1 ? "" : "s"}
         </p>
       </div>
     );
@@ -143,12 +69,43 @@ function CustomTooltip({ active, payload, label }) {
 }
 
 export default function DashboardPage() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
   });
+
+  useEffect(() => {
+    const unsubscribe = subscribeToProducts(
+      (items) => {
+        setProducts(items);
+        setLoading(false);
+      },
+      () => setLoading(false)
+    );
+    return unsubscribe;
+  }, []);
+
+  const stats = {
+    total: products.length,
+    inStock: products.filter((p) => getStockStatus(p.stock) === "In Stock").length,
+    lowStock: products.filter((p) => getStockStatus(p.stock) === "Low Stock").length,
+    outOfStock: products.filter((p) => getStockStatus(p.stock) === "Out of Stock").length,
+  };
+
+  const categoryCounts = Array.from(
+    products.reduce((map, p) => {
+      const key = p.category || "Uncategorized";
+      map.set(key, (map.get(key) || 0) + 1);
+      return map;
+    }, new Map()),
+    ([name, count]) => ({ name, count })
+  );
+
+  const latestProducts = products.slice(0, 5);
 
   return (
     <div className="space-y-6">
@@ -169,145 +126,141 @@ export default function DashboardPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat) => {
+        {statCards.map((stat) => {
           const Icon = stat.icon;
+          const value = stats[stat.key];
           return (
-            <div
-              key={stat.title}
-              className="sk-panel p-6"
-            >
+            <div key={stat.key} className="sk-panel p-6">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
                     {stat.title}
                   </p>
                   <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">
-                    {stat.value}
+                    {loading ? "..." : value.toLocaleString()}
                   </p>
                 </div>
-                <div
-                  className={`sk-icon p-3 ${stat.color}`}
-                >
+                <div className={`sk-icon p-3 ${stat.color}`}>
                   <Icon className={`h-5 w-5 ${stat.iconColor}`} />
                 </div>
-              </div>
-              <div className="mt-4 flex items-center gap-1">
-                {stat.positive ? (
-                  <ArrowUpRight className="h-4 w-4 text-emerald-500" />
-                ) : (
-                  <ArrowDownRight className="h-4 w-4 text-red-500" />
-                )}
-                <span
-                  className={`text-sm ${
-                    stat.positive
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-red-600 dark:text-red-400"
-                  }`}
-                >
-                  {stat.trend}
-                </span>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Revenue Chart */}
+      {/* Products by Category Chart */}
       <div className="sk-panel p-6">
         <div className="flex items-center gap-2 mb-6">
           <span className="flex h-9 w-9 items-center justify-center rounded-full sk-icon">
-            <TrendingUp className="h-5 w-5 text-slate-400" />
+            <PackageOpen className="h-5 w-5 text-slate-400" />
           </span>
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-            Revenue Trend
+            Products by Category
           </h2>
         </div>
-        <ResponsiveContainer width="100%" height={350}>
-          <AreaChart data={revenueData}>
-            <defs>
-              <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#2563EB" stopOpacity={0.15} />
-                <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="#e2e8f0"
-              vertical={false}
-            />
-            <XAxis
-              dataKey="month"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: "#94a3b8", fontSize: 12 }}
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: "#94a3b8", fontSize: 12 }}
-              tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            <Area
-              type="monotone"
-              dataKey="revenue"
-              stroke="#2563EB"
-              strokeWidth={2}
-              fill="url(#revenueGradient)"
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+        {categoryCounts.length === 0 ? (
+          <p className="text-sm text-slate-500 dark:text-slate-400 py-10 text-center">
+            {loading
+              ? "Loading inventory..."
+              : "No products yet. Add products from the Manage Products page."}
+          </p>
+        ) : (
+          <ResponsiveContainer width="100%" height={350}>
+            <BarChart data={categoryCounts}>
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="#e2e8f0"
+                vertical={false}
+              />
+              <XAxis
+                dataKey="name"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: "#94a3b8", fontSize: 12 }}
+              />
+              <YAxis
+                allowDecimals={false}
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: "#94a3b8", fontSize: 12 }}
+              />
+              <Tooltip content={<CategoryTooltip />} cursor={{ fill: "rgba(148,163,184,0.1)" }} />
+              <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                {categoryCounts.map((entry, index) => (
+                  <Cell
+                    key={entry.name}
+                    fill={index % 2 === 0 ? "#2563EB" : "#60a5fa"}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
-      {/* Recent Orders Table */}
+      {/* Latest Products Table */}
       <div className="sk-panel">
         <div className="p-6 border-b border-border-light dark:border-border-dark">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-            Recent Orders
+            Latest Products
           </h2>
         </div>
         <div className="overflow-x-auto px-1 pb-1">
           <table className="w-full">
             <thead>
               <tr className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                <th className="px-6 py-3">Order ID</th>
-                <th className="px-6 py-3">Customer</th>
                 <th className="px-6 py-3">Product</th>
-                <th className="px-6 py-3">Amount</th>
+                <th className="px-6 py-3">Category</th>
+                <th className="px-6 py-3">Price</th>
+                <th className="px-6 py-3">Stock</th>
                 <th className="px-6 py-3">Status</th>
-                <th className="px-6 py-3">Date</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-              {recentOrders.map((order) => (
-                <tr
-                  key={order.orderId}
-                  className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-                >
-                  <td className="px-6 py-4 text-sm font-medium text-blue-600 dark:text-blue-400">
-                    {order.orderId}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-900 dark:text-white">
-                    {order.customer}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">
-                    {order.product}
-                  </td>
-                  <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
-                    {order.amount}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyles[order.status]}`}
-                    >
-                      {order.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
-                    {order.date}
+              {latestProducts.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-16 text-center">
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      {loading
+                        ? "Loading products..."
+                        : "No products added yet."}
+                    </p>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                latestProducts.map((product) => {
+                  const status = getStockStatus(product.stock);
+                  return (
+                    <tr
+                      key={product.id}
+                      className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                    >
+                      <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
+                        {product.name}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">
+                        {product.category}
+                      </td>
+                      <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
+                        ${product.price.toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
+                        {product.stock}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStockBadgeClass(
+                            status
+                          )}`}
+                        >
+                          {status}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
