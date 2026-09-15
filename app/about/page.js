@@ -1,49 +1,26 @@
-import { Shield, Heart, Lightbulb } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
-const teamMembers = [
-  {
-    name: "James Mitchell",
-    role: "Founder & CEO",
-    bio: "Visionary leader with 15+ years in tech retail",
-    initials: "JM",
-  },
-  {
-    name: "Sarah Chen",
-    role: "Head of Operations",
-    bio: "Expert in supply chain and customer experience",
-    initials: "SC",
-  },
-  {
-    name: "Marcus Rodriguez",
-    role: "Tech Lead",
-    bio: "Certified specialist in consumer electronics",
-    initials: "MR",
-  },
-  {
-    name: "Emily Watson",
-    role: "Customer Relations",
-    bio: "Dedicated to ensuring customer satisfaction",
-    initials: "EW",
-  },
-];
+const founder = {
+  name: "James Mitchell",
+  role: "Founder & CEO",
+  bio: "With over 15 years of experience in the technology industry, James founded Voltex in 2015 with a clear vision: to make premium electronics accessible to everyone. His deep understanding of consumer technology and passion for exceptional customer service has driven Voltex from a single storefront to one of the region's most trusted electronics retailers.",
+  quote: "We believe everyone deserves access to reliable, cutting-edge technology without the premium price tag.",
+};
 
 const values = [
   {
     title: "Quality First",
-    icon: Shield,
     description:
       "Every product we stock is rigorously tested and verified for quality and performance.",
   },
   {
     title: "Customer Focus",
-    icon: Heart,
     description:
       "Our customers are at the heart of everything we do. We provide personalized support and expert guidance.",
   },
   {
     title: "Innovation",
-    icon: Lightbulb,
     description:
       "We stay ahead of the curve, constantly updating our inventory with the latest technology.",
   },
@@ -56,7 +33,7 @@ export default function AboutPage() {
       <section className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
+            <div className="order-2 lg:order-1">
               <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-6">
                 Our Story
               </h2>
@@ -75,10 +52,14 @@ export default function AboutPage() {
                 commitment to quality and value remains the same as day one.
               </p>
             </div>
-            <div className="bg-primary/10 dark:bg-primary/20 rounded-2xl p-12 flex items-center justify-center sk-panel-inset">
-              <span className="text-2xl font-semibold text-primary [text-shadow:0_1px_0_rgba(255,255,255,0.5)]">
-                Our Store
-              </span>
+            <div className="relative overflow-hidden rounded-2xl sk-panel-inset order-1 lg:order-2">
+              <Image
+                src="/images/photo-1565211604822-2641d0b081a6.avif"
+                alt="Our Store"
+                width={800}
+                height={600}
+                className="w-full h-full object-cover"
+              />
             </div>
           </div>
         </div>
@@ -92,15 +73,11 @@ export default function AboutPage() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {values.map((value) => {
-              const Icon = value.icon;
               return (
                 <div
                   key={value.title}
                   className="sk-panel p-8 transition-all duration-300 hover:-translate-y-1"
                 >
-                  <div className="w-12 h-12 rounded-full sk-icon bg-primary/10 flex items-center justify-center mb-4">
-                    <Icon className="w-6 h-6 text-primary" />
-                  </div>
                   <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-3">
                     {value.title}
                   </h3>
@@ -120,26 +97,24 @@ export default function AboutPage() {
           <h2 className="text-3xl font-bold text-slate-900 dark:text-white text-center mb-12 [text-shadow:0_1px_0_rgba(255,255,255,0.7)] dark:[text-shadow:0_2px_4px_rgba(0,0,0,0.45)]">
             Meet Our Team
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {teamMembers.map((member) => (
-              <div
-                key={member.name}
-                className="text-center sk-panel p-6"
-              >
-                <div className="w-20 h-20 rounded-full sk-icon bg-slate-200/70 dark:bg-slate-700 flex items-center justify-center mx-auto mb-4">
-                  <span className="text-xl font-semibold text-slate-600 dark:text-slate-300">
-                    {member.initials}
-                  </span>
-                </div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                  {member.name}
-                </h3>
-                <p className="text-primary font-medium mb-2">{member.role}</p>
-                <p className="text-slate-600 dark:text-slate-300 text-sm">
-                  {member.bio}
-                </p>
-              </div>
-            ))}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <h3 className="text-2xl font-semibold text-slate-900 dark:text-white mb-1">
+                {founder.name}
+              </h3>
+              <p className="text-primary font-medium mb-4">{founder.role}</p>
+              <p className="text-slate-600 dark:text-slate-300 leading-relaxed mb-6">
+                {founder.bio}
+              </p>
+              <blockquote className="border-l-4 border-primary pl-4 italic text-slate-500 dark:text-slate-400">
+                &ldquo;{founder.quote}&rdquo;
+              </blockquote>
+            </div>
+            <div className="bg-primary/10 dark:bg-primary/20 rounded-2xl p-12 flex items-center justify-center sk-panel-inset aspect-square max-h-[400px]">
+              <span className="text-2xl font-semibold text-primary [text-shadow:0_1px_0_rgba(255,255,255,0.5)]">
+                Founder Photo
+              </span>
+            </div>
           </div>
         </div>
       </section>

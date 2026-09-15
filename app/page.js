@@ -22,11 +22,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="bg-slate-50 dark:bg-slate-900 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <FAQ />
-        </div>
-      </section>
+      <FAQ />
     </main>
   );
 }

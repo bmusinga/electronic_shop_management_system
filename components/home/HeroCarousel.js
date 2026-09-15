@@ -12,6 +12,7 @@ const slides = [
     cta: "Shop Now",
     href: "/products",
     bg: "bg-[#2563EB]",
+    image: "/images/hero-electronics.jpg",
   },
   {
     headline: "Smart Solutions",
@@ -19,6 +20,7 @@ const slides = [
     cta: "Learn More",
     href: "/about",
     bg: "bg-slate-900",
+    image: "/images/hallway-modern-electronics-store_808280-2288.avif",
   },
   {
     headline: "New Arrivals",
@@ -26,6 +28,7 @@ const slides = [
     cta: "View Collection",
     href: "/products",
     bg: "bg-slate-950",
+    image: "/images/electronics-store-display-cameras-accessories-november-tashkent-uzbekistan-showcase-filled-various-lenses-audio-420572841.webp",
   },
 ];
 
@@ -70,23 +73,33 @@ export default function HeroCarousel() {
   return (
     <section className="relative w-full overflow-hidden">
       <div ref={emblaRef} className="overflow-hidden">
-        <div className="flex">
+        <div className="flex transition-transform duration-[900ms] ease-[cubic-bezier(0.25,1,0.3,1)] will-change-transform">
           {slides.map((slide, index) => (
             <div
               key={index}
-              className={`flex-none w-full min-h-[320px] md:min-h-[420px] lg:min-h-[480px] flex items-center ${slide.bg}`}
+              className={`flex-none w-full min-h-[480px] md:min-h-[480px] lg:min-h-[540px] flex items-center ${slide.bg} relative`}
             >
-              <div className="w-full max-w-7xl mx-auto px-6 md:px-12 lg:px-20 py-10">
-                <div className="max-w-2xl space-y-6">
-                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-white leading-tight tracking-tight [text-shadow:0_2px_4px_rgba(0,0,0,0.3)]">
+              {slide.image && (
+                <>
+                  <img
+                    src={slide.image}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/50" />
+                </>
+              )}
+              <div className="relative z-10 w-full max-w-7xl mx-auto px-6 md:px-12 lg:px-20 py-10">
+                <div className="max-w-2xl mx-auto space-y-2 text-center">
+                  <h1 className="text-[clamp(1.5rem,8vw,3rem)] md:text-6xl lg:text-7xl font-extrabold text-white leading-tight tracking-tight whitespace-nowrap [text-shadow:0_2px_4px_rgba(0,0,0,0.3)]">
                     {slide.headline}
                   </h1>
-                  <p className="text-base md:text-lg text-slate-200 dark:text-slate-300 max-w-lg [text-shadow:0_1px_3px_rgba(0,0,0,0.35)]">
+                  <p className="text-base md:text-lg text-slate-200 dark:text-slate-300 max-w-lg mx-auto [text-shadow:0_1px_3px_rgba(0,0,0,0.35)]">
                     {slide.subtext}
                   </p>
                   <Link
                     href={slide.href}
-                    className="inline-block mt-4 px-8 py-3.5 bg-gradient-to-b from-white to-[#dfe5ec] text-slate-900 font-semibold rounded-lg text-base border border-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-1px_0_rgba(0,0,0,0.15),0_3px_8px_rgba(0,0,0,0.35)] hover:from-[#f6f8fb] hover:to-[#d6dde6] active:translate-y-px active:shadow-[inset_0_2px_6px_rgba(0,0,0,0.22)] transition-all duration-150"
+                    className="inline-block px-8 py-3.5 bg-gradient-to-b from-white to-[#dfe5ec] text-slate-900 font-semibold rounded-lg text-base border border-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),inset_0_-1px_0_rgba(0,0,0,0.15),0_3px_8px_rgba(0,0,0,0.35)] hover:from-[#f6f8fb] hover:to-[#d6dde6] active:translate-y-px active:shadow-[inset_0_2px_6px_rgba(0,0,0,0.22)] transition-all duration-150"
                   >
                     {slide.cta}
                   </Link>

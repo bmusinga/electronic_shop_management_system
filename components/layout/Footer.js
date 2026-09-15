@@ -88,18 +88,10 @@ export default function Footer() {
       </div>
 
       <div className="bg-black/15 border-t border-white/10 shadow-[inset_0_2px_4px_rgba(0,0,0,0.35),0_1px_0_rgba(255,255,255,0.08)]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-maroon-cream-dim [text-shadow:0_1px_1px_rgba(0,0,0,0.4)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col items-center justify-center gap-4">
+          <p className="text-sm text-center text-maroon-cream-dim [text-shadow:0_1px_1px_rgba(0,0,0,0.4)]">
             &copy; {new Date().getFullYear()} Voltex Electronics. All rights reserved.
           </p>
-          <div className="flex gap-6">
-            <Link href="#" className={footerLink}>
-              Privacy Policy
-            </Link>
-            <Link href="#" className={footerLink}>
-              Terms of Service
-            </Link>
-          </div>
         </div>
       </div>
     </footer>

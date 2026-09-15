@@ -7,6 +7,7 @@ import { useTheme } from "@/hooks/useTheme";
 import {
   LayoutDashboard,
   Package,
+  MessageSquare,
   Settings,
   LogOut,
   Sun,
@@ -18,6 +19,7 @@ import {
 const sidebarLinks = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/products", label: "Products", icon: Package },
+  { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 

@@ -10,7 +10,7 @@ import {
   Menu,
   X,
   Zap,
-  User,
+  Phone,
 } from "lucide-react";
 
 const navLinks = [
@@ -61,13 +61,12 @@ export default function Navbar() {
               {dark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
 
-            <Link
-              href="/login"
-              className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium sk-btn-primary"
-            >
-              <User className="w-4 h-4" />
-              Dashboard
-            </Link>
+            <div className="hidden sm:flex items-center gap-2 ml-2 border border-border-light dark:border-border-dark rounded-lg bg-gradient-to-b from-white to-[#e2e8f0] dark:from-[#2a3a50] dark:to-[#16202f] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_1px_2px_rgba(15,23,42,0.18)]">
+              <a href="tel:+254712345678" className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark hover:text-primary dark:hover:text-white transition-colors">
+                <Phone className="w-4 h-4" />
+                +254 712 345 678
+              </a>
+            </div>
 
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
@@ -92,14 +91,6 @@ export default function Navbar() {
                   {link.label}
                 </Link>
               ))}
-              <Link
-                href="/login"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center justify-center gap-2 mt-1 px-4 py-2.5 rounded-lg text-sm font-medium sk-btn-primary"
-              >
-                <User className="w-4 h-4" />
-                Dashboard
-              </Link>
             </div>
           </div>
         )}

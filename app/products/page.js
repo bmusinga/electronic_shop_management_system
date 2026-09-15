@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Search, ShoppingCart, Filter } from "lucide-react";
-import { getProducts } from "@/lib/firestore";
 import { getStockStatus, getStockBadgeClass } from "@/lib/stock";
+import { subscribeToProducts } from "@/lib/firestore";
 
 const categories = ["All", "Smartphones", "Laptops", "Audio", "Accessories", "Wearables"];
 
@@ -15,22 +15,16 @@ export default function ProductsPage() {
   const [activeCategory, setActiveCategory] = useState("All");
 
   useEffect(() => {
-    let active = true;
-    getProducts()
-      .then((items) => {
-        if (active) {
-          setProducts(items);
-          setLoading(false);
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setLoading(false);
-        }
-      });
-    return () => {
-      active = false;
-    };
+    const unsubscribe = subscribeToProducts(
+      (items) => {
+        setProducts(items);
+        setLoading(false);
+      },
+      () => {
+        setLoading(false);
+      }
+    );
+    return unsubscribe;
   }, []);
 
   const filteredProducts = products.filter((product) => {

@@ -1,11 +1,4 @@
-import { Clock, Users, Package, Headphones, Phone, MapPin, Mail } from "lucide-react";
-
-const stats = [
-  { icon: Clock, label: "10+ Years Experience" },
-  { icon: Users, label: "50,000+ Customers" },
-  { icon: Package, label: "1,000+ Products" },
-  { icon: Headphones, label: "24/7 Support" },
-];
+import { Phone, MapPin, Mail } from "lucide-react";
 
 const hours = [
   { day: "Mon - Fri", time: "8AM - 8PM" },
@@ -41,22 +34,6 @@ export default function BusinessInfo() {
               carefully selects every product to ensure quality and performance,
               so you can shop with confidence.
             </p>
-
-            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {stats.map(({ icon: Icon, label }) => (
-                <div
-                  key={label}
-                  className="flex items-center gap-3 rounded-lg sk-panel p-4"
-                >
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full sk-icon bg-[#2563EB]/10">
-                    <Icon className="h-5 w-5 text-[#2563EB]" />
-                  </div>
-                  <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                    {label}
-                  </span>
-                </div>
-              ))}
-            </div>
 
             <div className="mt-8 space-y-4">
               <h3 className={`text-lg font-semibold text-slate-900 dark:text-white ${headingShadow}`}>

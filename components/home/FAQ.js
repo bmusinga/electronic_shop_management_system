@@ -34,9 +34,9 @@ export default function FAQ() {
   };
 
   return (
-    <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white dark:bg-neutral-950">
-      <div className="max-w-3xl mx-auto">
-        <h2 className="text-3xl font-bold text-center text-neutral-900 dark:text-white mb-12 [text-shadow:0_1px_0_rgba(255,255,255,0.7)] dark:[text-shadow:0_2px_4px_rgba(0,0,0,0.45)]">
+    <section className="py-16 bg-slate-50 dark:bg-slate-900">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 className="text-3xl font-bold text-center text-slate-900 dark:text-white mb-12 [text-shadow:0_1px_0_rgba(255,255,255,0.7)] dark:[text-shadow:0_2px_4px_rgba(0,0,0,0.45)]">
           Frequently Asked Questions
         </h2>
 
@@ -51,18 +51,18 @@ export default function FAQ() {
                   className={`w-full flex items-center justify-between px-6 py-5 text-left transition-all duration-150 ${
                     isOpen
                       ? "bg-gradient-to-b from-[#eef4fb] to-[#dde6f0] dark:from-[#18202e] dark:to-[#101823] shadow-[inset_0_2px_5px_rgba(15,23,42,0.1)]"
-                      : "bg-white dark:bg-neutral-900 hover:bg-gradient-to-b hover:from-white hover:to-[#eef2f7] dark:hover:from-[#1d2735] dark:hover:to-[#131c29]"
+                      : "bg-gradient-to-b from-[var(--sk-panel-top)] to-[var(--sk-panel-bottom)] hover:bg-gradient-to-b hover:from-white hover:to-[#eef2f7] dark:hover:from-[#1d2735] dark:hover:to-[#131c29]"
                   }`}
                   aria-expanded={isOpen}
                 >
-                  <span className="text-base font-semibold text-neutral-900 dark:text-white pr-4 [text-shadow:0_1px_0_rgba(255,255,255,0.6)] dark:[text-shadow:none]">
+                  <span className="text-base font-semibold text-slate-900 dark:text-white pr-4 [text-shadow:0_1px_0_rgba(255,255,255,0.6)] dark:[text-shadow:none]">
                     {faq.question}
                   </span>
                   <span
                     className={`flex-shrink-0 w-7 h-7 rounded-full bg-gradient-to-b from-white to-[#e2e8f0] dark:from-[#2a3a50] dark:to-[#16202f] border border-border-light dark:border-border-dark flex items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_1px_2px_rgba(15,23,42,0.16)] active:translate-y-px active:shadow-[inset_0_2px_5px_rgba(15,23,42,0.2)] transition-all duration-150`}
                   >
                     <ChevronDown
-                      className={`w-4 h-4 text-neutral-500 dark:text-neutral-400 transition-transform duration-300 ${
+                      className={`w-4 h-4 text-slate-500 dark:text-slate-400 transition-transform duration-300 ${
                         isOpen ? "rotate-180" : ""
                       }`}
                     />
@@ -75,7 +75,7 @@ export default function FAQ() {
                   }`}
                 >
                   <div className="px-6 pb-5">
-                    <div className="sk-panel-inset px-4 py-4 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400 bg-slate-50 dark:bg-neutral-900">
+                    <div className="sk-panel-inset px-4 py-4 text-sm leading-relaxed text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800">
                       {faq.answer}
                     </div>
                   </div>
