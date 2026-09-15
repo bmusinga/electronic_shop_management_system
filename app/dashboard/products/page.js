@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import { Plus, Trash2, Edit, Search, X, AlertCircle } from "lucide-react";
+import ProductImage from "@/components/ui/ProductImage";
 import {
   addProduct,
   updateProduct,
@@ -91,6 +91,15 @@ export default function DashboardProductsPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     setFormError("");
+    const image = form.image.trim();
+    if (!image) {
+      setFormError("Image URL is required.");
+      return;
+    }
+    if (!/^https?:\/\//i.test(image) && !/^\//.test(image)) {
+      setFormError("Image URL must start with http://, https://, or a local path like /images/...");
+      return;
+    }
     setSaving(true);
     try {
       if (form.id) {
@@ -189,7 +198,7 @@ export default function DashboardProductsPage() {
         </div>
       )}
 
-      <div className="sk-panel overflow-x-auto">
+      <div className="sk-panel overflow-x-auto hidden md:block">
         <table className="w-full min-w-[800px] text-left">
           <thead>
             <tr className="border-b border-border-light dark:border-border-dark text-xs uppercase tracking-wider text-text-muted-light dark:text-text-muted-dark">
@@ -220,7 +229,7 @@ export default function DashboardProductsPage() {
                     className="border-b border-border-light dark:border-border-dark last:border-b-0 hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors"
                   >
                     <td className="px-6 py-4">
-                      <Image
+                      <ProductImage
                         src={product.image}
                         alt={product.name}
                         width={48}
@@ -280,6 +289,79 @@ export default function DashboardProductsPage() {
             )}
           </tbody>
         </table>
+      </div>
+
+      <div className="md:hidden space-y-4">
+        {filteredProducts.length === 0 ? (
+          <div className="sk-panel rounded-xl py-16 text-center">
+            <p className="text-text-muted-light dark:text-text-muted-dark text-sm">
+              No products found.
+            </p>
+          </div>
+        ) : (
+          filteredProducts.map((product) => {
+            const status = getStockStatus(product.stock);
+            return (
+              <div key={product.id} className="sk-panel rounded-xl p-4">
+                <div className="flex gap-4">
+                  <ProductImage
+                    src={product.image}
+                    alt={product.name}
+                    width={80}
+                    height={80}
+                    className="w-20 h-20 object-cover rounded-xl bg-slate-100 dark:bg-slate-700 shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark leading-snug">
+                        {product.name}
+                      </h3>
+                      <span
+                        className={`inline-block text-[11px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${getStockBadgeClass(
+                          status
+                        )}`}
+                      >
+                        {status}
+                      </span>
+                    </div>
+                    {product.description && (
+                      <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-1 line-clamp-2">
+                        {product.description}
+                      </p>
+                    )}
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="inline-block text-xs font-medium px-2.5 py-1 rounded-full sk-badge bg-primary-light text-primary dark:bg-blue-900/40 dark:text-blue-300 whitespace-nowrap">
+                        {product.category}
+                      </span>
+                      <span className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark">
+                        ${product.price.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="mt-1.5 text-xs text-text-secondary-light dark:text-text-secondary-dark">
+                      Stock: <span className="font-medium">{product.stock}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 pt-3 border-t border-border-light dark:border-border-dark flex items-center gap-2">
+                  <button
+                    onClick={() => openEditModal(product)}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium sk-btn rounded-lg"
+                  >
+                    <Edit className="w-4 h-4" />
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => setDeleteId(product.id)}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-danger border border-red-300/70 dark:border-red-900/60 rounded-lg bg-gradient-to-b from-[#fff5f5] to-[#fee2e2] dark:from-[#33171a] dark:to-[#200d10] shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_1px_2px_rgba(15,23,42,0.14)] active:translate-y-px active:shadow-[inset_0_2px_5px_rgba(220,38,38,0.25)] transition-all duration-150"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       {isModalOpen && (

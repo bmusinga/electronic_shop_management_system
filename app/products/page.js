@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import { Search, ShoppingCart, Filter } from "lucide-react";
+import ProductImage from "@/components/ui/ProductImage";
 import { getStockStatus, getStockBadgeClass } from "@/lib/stock";
 import { subscribeToProducts } from "@/lib/firestore";
 
@@ -92,7 +92,7 @@ export default function ProductsPage() {
                   className="sk-panel transition-all duration-300 hover:-translate-y-1 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-1px_0_rgba(15,23,42,0.06),0_10px_20px_rgba(15,23,42,0.2)] group overflow-hidden"
                 >
                   <div className="m-3 mb-0 sk-panel-inset relative overflow-hidden">
-                    <Image
+                    <ProductImage
                       src={product.image}
                       alt={product.name}
                       width={400}

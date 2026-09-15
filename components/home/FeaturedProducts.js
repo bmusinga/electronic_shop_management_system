@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Star, ShoppingCart } from "lucide-react";
+import ProductImage from "@/components/ui/ProductImage";
 import { getStockStatus } from "@/lib/stock";
 import { subscribeToProducts } from "@/lib/firestore";
 
@@ -25,7 +25,7 @@ function ProductCard({ product }) {
   return (
     <div className="group sk-panel overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-1px_0_rgba(15,23,42,0.06),0_10px_20px_rgba(15,23,42,0.2)]">
       <div className="m-3 mb-0 sk-panel-inset relative w-auto h-44 bg-slate-100 dark:bg-slate-700 overflow-hidden">
-        <Image
+        <ProductImage
           src={product.image}
           alt={product.name}
           fill
