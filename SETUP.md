@@ -192,6 +192,8 @@ Images you upload or capture in the dashboard are stored in your **free Google D
 7. Restart your dev server (`npm run dev`) and reload the dashboard
 
 > **Note:** The first time anyone uploads, Google shows a "Google hasn't verified this app" screen. Click **Advanced > Go to <app name> (unsafe)** — this is expected for a personal/unpublished app and only affects the admin's own sign-in.
+>
+> **Deleting images:** Product photos are uploaded to the Google account you choose when you click **Connect Google Drive**. When you delete a product (or replace/remove its image), the uploaded file is also deleted from that account's Drive automatically.
 
 ---
 

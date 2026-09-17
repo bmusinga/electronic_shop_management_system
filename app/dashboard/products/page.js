@@ -26,6 +26,8 @@ import {
   preloadDrive,
   requestDriveAccessToken,
   hasDriveToken,
+  getDriveFileId,
+  deleteDriveFile,
 } from "@/lib/drive";
 
 const categories = ["Smartphones", "Laptops", "Audio", "Accessories", "Wearables"];
@@ -215,6 +217,12 @@ export default function DashboardProductsPage() {
     setSaving(true);
     try {
       if (form.id) {
+        const existing = products.find((product) => product.id === form.id);
+        const oldDriveId = existing ? getDriveFileId(existing.image) : null;
+        const newDriveId = getDriveFileId(form.image);
+        if (oldDriveId && oldDriveId !== newDriveId) {
+          deleteDriveFile(oldDriveId).catch(() => {});
+        }
         await updateProduct(form.id, toProductData(form));
       } else {
         await addProduct(toProductData(form));
@@ -230,7 +238,12 @@ export default function DashboardProductsPage() {
 
   async function handleDelete() {
     setFormError("");
+    const target = products.find((product) => product.id === deleteId);
+    const driveId = target ? getDriveFileId(target.image) : null;
     try {
+      if (driveId) {
+        await deleteDriveFile(driveId).catch(() => {});
+      }
       await removeProduct(deleteId);
       setDeleteId(null);
     } catch (err) {
