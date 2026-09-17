@@ -151,15 +151,51 @@ After signing into the dashboard:
    - **Price**: e.g., 1199
    - **Category**: Select from the dropdown
    - **Stock**: e.g., 45
-   - **Image URL**: Paste a direct URL to a product image (e.g., from Unsplash)
+   - **Image**: Click **"Upload from Device"** to pick a photo from your device or **"Take Photo"** to use your camera. The image is compressed, saved to your Google Drive, and a public link is stored with the product.
 4. Click **"Add Product"**
 5. Repeat for all products you want to display
+
+> **Note:** The first time you upload an image you will be asked to sign in to your Google account to allow the app to save images to your Drive. Files are stored in a hidden app folder and made publicly viewable so they appear on the site.
 
 The products page will pull from Firestore automatically once Firebase is configured.
 
 ---
 
-## Step 7: Deploy to Vercel
+## Step 7: Set Up Google Drive for Product Images (required for photo uploads)
+
+Images you upload or capture in the dashboard are stored in your **free Google Drive** (15 GB) and shown publicly on the site. To enable this:
+
+1. Go to the **Google Cloud Console**: https://console.cloud.google.com
+2. Create a new project (or select an existing one), e.g. `voltex-electronics`
+3. Enable the **Google Drive API**:
+   - Go to **APIs & Services > Library**
+   - Search for **"Google Drive API"**, click it, then click **"Enable"**
+4. Configure the **OAuth consent screen**:
+   - Go to **APIs & Services > OAuth consent screen**
+   - Choose **External**, fill in the app name (e.g. "Voltex") and your email, then click **Save**
+   - Under **Test users**, click **Add users** and add the email you will sign in with on the dashboard
+   - Under **Scopes**, add the scope: `https://www.googleapis.com/auth/drive.file`
+5. Create the **OAuth Client ID**:
+   - Go to **APIs & Services > Credentials**
+   - Click **"Create credentials" > "OAuth client ID"**
+   - Choose **Application type: Web application**
+   - Under **Authorized JavaScript origins**, add:
+     - `http://localhost:3000` (for local testing)
+     - `https://YOUR-SITE.vercel.app` (your live site URL, e.g. `https://voltex-electronics.vercel.app`)
+   - Click **"Create"** and copy the **Client ID** (ends in `.apps.googleusercontent.com`)
+6. Add it to your project:
+   - In `.env.local`, set:
+     ```
+     NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+     ```
+   - If deploying to Vercel, also add `NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID` under your project's **Environment Variables**
+7. Restart your dev server (`npm run dev`) and reload the dashboard
+
+> **Note:** The first time anyone uploads, Google shows a "Google hasn't verified this app" screen. Click **Advanced > Go to <app name> (unsafe)** — this is expected for a personal/unpublished app and only affects the admin's own sign-in.
+
+---
+
+## Step 8: Deploy to Vercel
 
 ### 7a. Push Your Code to GitHub
 
@@ -191,13 +227,14 @@ The products page will pull from Firestore automatically once Firebase is config
      | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Your storage bucket |
      | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Your sender ID |
      | `NEXT_PUBLIC_FIREBASE_APP_ID` | Your app ID |
+     | `NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID` | Your Google OAuth Client ID |
 6. Click **"Deploy"**
 7. Wait for the build to finish (usually 1-2 minutes)
 8. Your site is now live at the URL Vercel gives you (e.g., `voltex-electronics.vercel.app`)
 
 ---
 
-## Step 8: Set Up Your Custom Domain (Optional)
+## Step 9: Set Up Your Custom Domain (Optional)
 
 1. In Vercel, go to your project > **"Settings" > "Domains"**
 2. Enter your domain name (e.g., `voltex.com`)

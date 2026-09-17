@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Edit, Search, X, AlertCircle } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Edit,
+  Search,
+  X,
+  AlertCircle,
+  Camera,
+  ImageIcon,
+} from "lucide-react";
 import ProductImage from "@/components/ui/ProductImage";
 import {
   addProduct,
@@ -10,8 +19,49 @@ import {
   subscribeToProducts,
 } from "@/lib/firestore";
 import { getStockStatus, getStockBadgeClass } from "@/lib/stock";
+import {
+  uploadImageToDrive,
+  isDriveConfigured,
+  preloadDrive,
+  requestDriveAccessToken,
+} from "@/lib/drive";
 
 const categories = ["Smartphones", "Laptops", "Audio", "Accessories", "Wearables"];
+
+const MAX_IMAGE_DIMENSION = 1200;
+const IMAGE_QUALITY = 0.7;
+
+function processImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(
+          1,
+          MAX_IMAGE_DIMENSION / Math.max(img.width, img.height)
+        );
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(
+          (blob) =>
+            blob
+              ? resolve(blob)
+              : reject(new Error("Could not encode the image.")),
+          "image/jpeg",
+          IMAGE_QUALITY
+        );
+      };
+      img.onerror = () => reject(new Error("Could not read image"));
+      img.src = reader.result;
+    };
+    reader.onerror = () => reject(new Error("Could not read file"));
+    reader.readAsDataURL(file);
+  });
+}
 
 const emptyForm = {
   id: null,
@@ -44,6 +94,7 @@ export default function DashboardProductsPage() {
   const [deleteId, setDeleteId] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     const unsubscribe = subscribeToProducts(
@@ -88,16 +139,44 @@ export default function DashboardProductsPage() {
     setIsModalOpen(true);
   }
 
+  function handleImageChange(file) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setFormError("Please choose an image file (JPG, PNG, or WEBP).");
+      return;
+    }
+    if (!isDriveConfigured()) {
+      setFormError(
+        "Google Drive is not configured. Set NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID in your .env.local file."
+      );
+      return;
+    }
+    setFormError("");
+    setUploading(true);
+    processImageFile(file)
+      .then((blob) => uploadImageToDrive(blob, `product-${Date.now()}.jpg`))
+      .then((uploaded) => {
+        setForm((prev) => ({ ...prev, image: uploaded.url }));
+      })
+      .catch((err) => {
+        const msg = err?.message || "";
+        if (/access_denied|popup_closed|user aborted|immediate_failed/i.test(msg)) {
+          setFormError(
+            "Google sign-in was cancelled. Try again and choose an account that grants upload access."
+          );
+        } else {
+          setFormError(msg || "Could not upload the image to Google Drive.");
+        }
+      })
+      .finally(() => setUploading(false));
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setFormError("");
     const image = form.image.trim();
     if (!image) {
-      setFormError("Image URL is required.");
-      return;
-    }
-    if (!/^https?:\/\//i.test(image) && !/^\//.test(image)) {
-      setFormError("Image URL must start with http://, https://, or a local path like /images/...");
+      setFormError("Please upload or take a photo for the product.");
       return;
     }
     setSaving(true);
@@ -470,18 +549,86 @@ export default function DashboardProductsPage() {
                   </select>
                 </div>
 
-                <div>
+                <div className="sm:col-span-2">
                   <label className="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-1.5">
-                    Image URL
+                    Image
                   </label>
-                  <input
-                    type="text"
-                    required
-                    value={form.image}
-                    onChange={(e) => setForm({ ...form, image: e.target.value })}
-                    className="w-full px-3.5 py-2.5 sk-input rounded-xl text-sm text-text-primary-light dark:text-text-primary-dark placeholder-text-muted-light dark:placeholder-text-muted-dark"
-                    placeholder="https://..."
-                  />
+                  <div className="flex items-center gap-4">
+                    {form.image ? (
+                      <div className="relative shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={form.image}
+                          alt="Product preview"
+                          className="w-20 h-20 object-cover rounded-xl border border-border-light dark:border-border-dark bg-slate-100 dark:bg-slate-700"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setForm({ ...form, image: "" })}
+                          className="absolute -top-2 -right-2 p-1 bg-white dark:bg-slate-800 border border-border-light dark:border-border-dark rounded-full shadow-md hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                          title="Remove image"
+                        >
+                          <X className="w-3.5 h-3.5 text-danger" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="w-20 h-20 shrink-0 rounded-xl border border-dashed border-border-light dark:border-border-dark flex items-center justify-center bg-slate-50 dark:bg-slate-800">
+                        <ImageIcon className="w-6 h-6 text-text-muted-light dark:text-text-muted-dark" />
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      {uploading ? (
+                        <div className="flex items-center gap-2 px-3 py-2 text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                          <div className="w-4 h-4 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
+                          Uploading to Google Drive...
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <label
+                              htmlFor="product-image-upload"
+                              className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 text-sm font-medium sk-btn rounded-lg"
+                            >
+                              <ImageIcon className="w-4 h-4" />
+                              Upload from Device
+                            </label>
+                            <input
+                              id="product-image-upload"
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                handleImageChange(e.target.files[0]);
+                                e.target.value = "";
+                              }}
+                            />
+                            <label
+                              htmlFor="product-image-capture"
+                              className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 text-sm font-medium sk-btn rounded-lg"
+                            >
+                              <Camera className="w-4 h-4" />
+                              Take Photo
+                            </label>
+                            <input
+                              id="product-image-capture"
+                              type="file"
+                              accept="image/*"
+                              capture="environment"
+                              className="hidden"
+                              onChange={(e) => {
+                                handleImageChange(e.target.files[0]);
+                                e.target.value = "";
+                              }}
+                            />
+                          </div>
+                          <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
+                            JPG, PNG, or WEBP. Images are compressed and stored
+                            in Google Drive.
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
 

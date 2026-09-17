@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { Zap, Eye, EyeOff, ArrowLeft, AlertCircle } from "lucide-react";
@@ -8,19 +8,26 @@ import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, loading, signIn } = useAuth();
+  const { user, loading, signIn, signOut } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [signingIn, setSigningIn] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const signOutTriggered = useRef(false);
 
   useEffect(() => {
-    if (!loading && user) {
-      router.push("/dashboard");
+    if (!loading && user && !signOutTriggered.current) {
+      signOutTriggered.current = true;
+      setSigningOut(true);
+      signOut()
+        .catch(() => {})
+        .finally(() => setSigningOut(false));
     }
-  }, [user, loading, router]);
+  }, [loading, user, signOut]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,6 +36,7 @@ export default function LoginPage() {
 
     try {
       await signIn(email, password);
+      setRedirecting(true);
       router.push("/dashboard");
     } catch (err) {
       if (err.code === "auth/user-not-found") {
@@ -49,16 +57,14 @@ export default function LoginPage() {
     }
   };
 
-  if (loading) {
+  if (loading || signingOut || redirecting) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
-        <div className="text-slate-500 dark:text-slate-400">Loading...</div>
+        <div className="text-slate-500 dark:text-slate-400">
+          {redirecting ? "Redirecting to dashboard..." : "Loading..."}
+        </div>
       </div>
     );
-  }
-
-  if (user) {
-    return null;
   }
 
   return (
