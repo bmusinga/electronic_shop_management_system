@@ -10,6 +10,7 @@ import {
   AlertCircle,
   Camera,
   ImageIcon,
+  HardDrive,
 } from "lucide-react";
 import ProductImage from "@/components/ui/ProductImage";
 import {
@@ -24,6 +25,7 @@ import {
   isDriveConfigured,
   preloadDrive,
   requestDriveAccessToken,
+  hasDriveToken,
 } from "@/lib/drive";
 
 const categories = ["Smartphones", "Laptops", "Audio", "Accessories", "Wearables"];
@@ -95,6 +97,7 @@ export default function DashboardProductsPage() {
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [driveConnected, setDriveConnected] = useState(false);
 
   useEffect(() => {
     const unsubscribe = subscribeToProducts(
@@ -123,6 +126,7 @@ export default function DashboardProductsPage() {
   function openAddModal() {
     setForm(emptyForm);
     setFormError("");
+    setDriveConnected(hasDriveToken());
     setIsModalOpen(true);
   }
 
@@ -137,7 +141,28 @@ export default function DashboardProductsPage() {
       image: product.image,
     });
     setFormError("");
+    setDriveConnected(hasDriveToken());
     setIsModalOpen(true);
+  }
+
+  async function handleConnectDrive() {
+    setFormError("");
+    setUploading(true);
+    try {
+      await requestDriveAccessToken();
+      setDriveConnected(true);
+    } catch (err) {
+      const msg = err?.message || "";
+      if (/access_denied|popup_closed|user aborted|immediate_failed|blocked|popup/i.test(msg)) {
+        setFormError(
+          "Google sign-in was cancelled or the popup was blocked. Allow popups for this site, then try again."
+        );
+      } else {
+        setFormError(msg || "Could not connect to Google Drive.");
+      }
+    } finally {
+      setUploading(false);
+    }
   }
 
   function handleImageChange(file) {
@@ -152,13 +177,17 @@ export default function DashboardProductsPage() {
       );
       return;
     }
+    if (!hasDriveToken()) {
+      setDriveConnected(false);
+      setFormError(
+        "Please connect Google Drive below, then choose your photo again."
+      );
+      return;
+    }
     setFormError("");
     setUploading(true);
-    const tokenPromise = requestDriveAccessToken();
     processImageFile(file)
-      .then((blob) =>
-        uploadImageToDrive(blob, tokenPromise, `product-${Date.now()}.jpg`)
-      )
+      .then((blob) => uploadImageToDrive(blob, `product-${Date.now()}.jpg`))
       .then((uploaded) => {
         setForm((prev) => ({ ...prev, image: uploaded.url }));
       })
@@ -584,9 +613,29 @@ export default function DashboardProductsPage() {
                       {uploading ? (
                         <div className="flex items-center gap-2 px-3 py-2 text-sm text-text-secondary-light dark:text-text-secondary-dark">
                           <div className="w-4 h-4 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
-                          Uploading to Google Drive...
+                          {driveConnected
+                            ? "Uploading to Google Drive..."
+                            : "Connecting to Google Drive..."}
+                        </div>
+                      ) : !driveConnected ? (
+                        <div className="flex flex-col items-start gap-2">
+                          <button
+                            type="button"
+                            onClick={handleConnectDrive}
+                            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium sk-btn rounded-lg"
+                          >
+                            <HardDrive className="w-4 h-4" />
+                            Connect Google Drive
+                          </button>
+                          <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
+                            Connect once to allow photos to be saved to your
+                            Google Drive.
+                          </p>
                         </div>
                       ) : (
+                        <></>
+                      )}
+                      {driveConnected && (
                         <>
                           <div className="flex flex-wrap items-center gap-2">
                             <label
