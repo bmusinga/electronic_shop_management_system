@@ -110,6 +110,7 @@ export default function DashboardProductsPage() {
         setLoading(false);
       }
     );
+    preloadDrive();
     return unsubscribe;
   }, []);
 
@@ -153,16 +154,19 @@ export default function DashboardProductsPage() {
     }
     setFormError("");
     setUploading(true);
+    const tokenPromise = requestDriveAccessToken();
     processImageFile(file)
-      .then((blob) => uploadImageToDrive(blob, `product-${Date.now()}.jpg`))
+      .then((blob) =>
+        uploadImageToDrive(blob, tokenPromise, `product-${Date.now()}.jpg`)
+      )
       .then((uploaded) => {
         setForm((prev) => ({ ...prev, image: uploaded.url }));
       })
       .catch((err) => {
         const msg = err?.message || "";
-        if (/access_denied|popup_closed|user aborted|immediate_failed/i.test(msg)) {
+        if (/access_denied|popup_closed|user aborted|immediate_failed|blocked|popup/i.test(msg)) {
           setFormError(
-            "Google sign-in was cancelled. Try again and choose an account that grants upload access."
+            "Google sign-in was cancelled or the popup was blocked. Allow popups for this site, then try again."
           );
         } else {
           setFormError(msg || "Could not upload the image to Google Drive.");
