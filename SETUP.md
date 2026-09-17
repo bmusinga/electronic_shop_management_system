@@ -163,7 +163,9 @@ The products page will pull from Firestore automatically once Firebase is config
 
 ## Step 7: Set Up Google Drive for Product Images (required for photo uploads)
 
-Images you upload or capture in the dashboard are stored in your **free Google Drive** (15 GB) and shown publicly on the site. To enable this:
+Images you upload or capture in the dashboard are stored in your **free Google Drive** (15 GB) and shown publicly on the site. The app uses a **server-side token**, so photos are always saved to **your** Drive account from **any** device — no one ever has to sign in to Google from the dashboard.
+
+### 7a. Google Cloud setup (one time)
 
 1. Go to the **Google Cloud Console**: https://console.cloud.google.com
 2. Create a new project (or select an existing one), e.g. `voltex-electronics`
@@ -173,8 +175,9 @@ Images you upload or capture in the dashboard are stored in your **free Google D
 4. Configure the **OAuth consent screen**:
    - Go to **APIs & Services > OAuth consent screen**
    - Choose **External**, fill in the app name (e.g. "Voltex") and your email, then click **Save**
-   - Under **Test users**, click **Add users** and add the email you will sign in with on the dashboard
+   - Under **Test users**, click **Add users** and add the **email of the Drive account you want photos saved to**
    - Under **Scopes**, add the scope: `https://www.googleapis.com/auth/drive.file`
+   - Click **Publish app > In production** so the token does not expire every 7 days. (Leave verification to Google; your app stays usable as an unverified personal app.)
 5. Create the **OAuth Client ID**:
    - Go to **APIs & Services > Credentials**
    - Click **"Create credentials" > "OAuth client ID"**
@@ -182,18 +185,32 @@ Images you upload or capture in the dashboard are stored in your **free Google D
    - Under **Authorized JavaScript origins**, add:
      - `http://localhost:3000` (for local testing)
      - `https://YOUR-SITE.vercel.app` (your live site URL, e.g. `https://voltex-electronics.vercel.app`)
-   - Click **"Create"** and copy the **Client ID** (ends in `.apps.googleusercontent.com`)
-6. Add it to your project:
-   - In `.env.local`, set:
-     ```
-     NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-     ```
-   - If deploying to Vercel, also add `NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID` under your project's **Environment Variables**
-7. Restart your dev server (`npm run dev`) and reload the dashboard
+   - Under **Authorized redirect URIs**, add:
+     - `http://localhost:3000/api/drive/callback` (for local testing)
+     - `https://YOUR-SITE.vercel.app/api/drive/callback` (your live site)
+   - Click **"Create"** and copy the **Client ID** (ends in `.apps.googleusercontent.com`), and note the **Client Secret**
 
-> **Note:** The first time anyone uploads, Google shows a "Google hasn't verified this app" screen. Click **Advanced > Go to <app name> (unsafe)** — this is expected for a personal/unpublished app and only affects the admin's own sign-in.
+### 7b. Add the credentials to your app
+
+In `.env.local`, set:
+
+```
+NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_DRIVE_CLIENT_SECRET=your-client-secret
+GOOGLE_DRIVE_REFRESH_TOKEN=(paste from step 7c)
+```
+
+### 7c. Get the refresh token (one time)
+
+1. Restart your dev server (`npm run dev`).
+2. Open this URL in your browser: `http://localhost:3000/api/drive/setup` (on the live site use `https://YOUR-SITE.vercel.app/api/drive/setup`).
+3. Sign in to the Google account whose Drive you want to use and click **Allow**. (If Google shows an "unverified app" screen, click **Advanced > Go to <app name> (unsafe)** — expected for personal apps.)
+4. You'll be redirected to a page showing a **refresh token** — copy it.
+5. Paste it into `GOOGLE_DRIVE_REFRESH_TOKEN` in `.env.local` (and in Vercel), then restart/redeploy.
+
+> **Important:** Keep the refresh token secret — anyone with it can upload to your Drive.
 >
-> **Deleting images:** Product photos are uploaded to the Google account you choose when you click **Connect Google Drive**. When you delete a product (or replace/remove its image), the uploaded file is also deleted from that account's Drive automatically.
+> **Deleting images:** When you delete a product (or replace its image), the uploaded file is automatically deleted from your Drive too.
 
 ---
 
@@ -230,6 +247,8 @@ Images you upload or capture in the dashboard are stored in your **free Google D
      | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Your sender ID |
      | `NEXT_PUBLIC_FIREBASE_APP_ID` | Your app ID |
      | `NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID` | Your Google OAuth Client ID |
+      | `GOOGLE_DRIVE_CLIENT_SECRET` | Your Google OAuth Client Secret |
+      | `GOOGLE_DRIVE_REFRESH_TOKEN` | The refresh token from step 7c |
 6. Click **"Deploy"**
 7. Wait for the build to finish (usually 1-2 minutes)
 8. Your site is now live at the URL Vercel gives you (e.g., `voltex-electronics.vercel.app`)

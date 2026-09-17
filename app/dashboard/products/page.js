@@ -10,7 +10,6 @@ import {
   AlertCircle,
   Camera,
   ImageIcon,
-  HardDrive,
 } from "lucide-react";
 import ProductImage from "@/components/ui/ProductImage";
 import {
@@ -20,15 +19,6 @@ import {
   subscribeToProducts,
 } from "@/lib/firestore";
 import { getStockStatus, getStockBadgeClass } from "@/lib/stock";
-import {
-  uploadImageToDrive,
-  isDriveConfigured,
-  preloadDrive,
-  requestDriveAccessToken,
-  hasDriveToken,
-  getDriveFileId,
-  deleteDriveFile,
-} from "@/lib/drive";
 
 const categories = ["Smartphones", "Laptops", "Audio", "Accessories", "Wearables"];
 
@@ -77,6 +67,32 @@ const emptyForm = {
   image: "",
 };
 
+function parseDriveFileId(url) {
+  if (!url) return null;
+  const match =
+    String(url).match(/lh3\.googleusercontent\.com\/d\/([^/?=&]+)/) ||
+    String(url).match(/drive\.google\.com\/thumbnail\?id=([^&]+)/) ||
+    String(url).match(/drive\.google\.com\/uc\?(?:[^&]*&)*id=([^&]+)/);
+  return match ? match[1] : null;
+}
+
+async function uploadImageToServer(blob) {
+  const formData = new FormData();
+  formData.append("file", blob, `product-${Date.now()}.jpg`);
+  const res = await fetch("/api/drive/upload", { method: "POST", body: formData });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data?.error || "Could not upload the image.");
+  }
+  return data.url;
+}
+
+async function deleteImageFromServer(url) {
+  const fileId = parseDriveFileId(url);
+  if (!fileId) return;
+  await fetch(`/api/drive/files/${fileId}`, { method: "DELETE" }).catch(() => {});
+}
+
 function toProductData(form) {
   return {
     name: form.name.trim(),
@@ -99,7 +115,6 @@ export default function DashboardProductsPage() {
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState("");
   const [uploading, setUploading] = useState(false);
-  const [driveConnected, setDriveConnected] = useState(false);
 
   useEffect(() => {
     const unsubscribe = subscribeToProducts(
@@ -115,7 +130,6 @@ export default function DashboardProductsPage() {
         setLoading(false);
       }
     );
-    preloadDrive();
     return unsubscribe;
   }, []);
 
@@ -128,7 +142,6 @@ export default function DashboardProductsPage() {
   function openAddModal() {
     setForm(emptyForm);
     setFormError("");
-    setDriveConnected(hasDriveToken());
     setIsModalOpen(true);
   }
 
@@ -143,28 +156,7 @@ export default function DashboardProductsPage() {
       image: product.image,
     });
     setFormError("");
-    setDriveConnected(hasDriveToken());
     setIsModalOpen(true);
-  }
-
-  async function handleConnectDrive() {
-    setFormError("");
-    setUploading(true);
-    try {
-      await requestDriveAccessToken();
-      setDriveConnected(true);
-    } catch (err) {
-      const msg = err?.message || "";
-      if (/access_denied|popup_closed|user aborted|immediate_failed|blocked|popup/i.test(msg)) {
-        setFormError(
-          "Google sign-in was cancelled or the popup was blocked. Allow popups for this site, then try again."
-        );
-      } else {
-        setFormError(msg || "Could not connect to Google Drive.");
-      }
-    } finally {
-      setUploading(false);
-    }
   }
 
   function handleImageChange(file) {
@@ -173,35 +165,15 @@ export default function DashboardProductsPage() {
       setFormError("Please choose an image file (JPG, PNG, or WEBP).");
       return;
     }
-    if (!isDriveConfigured()) {
-      setFormError(
-        "Google Drive is not configured. Set NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID in your .env.local file."
-      );
-      return;
-    }
-    if (!hasDriveToken()) {
-      setDriveConnected(false);
-      setFormError(
-        "Please connect Google Drive below, then choose your photo again."
-      );
-      return;
-    }
     setFormError("");
     setUploading(true);
     processImageFile(file)
-      .then((blob) => uploadImageToDrive(blob, `product-${Date.now()}.jpg`))
-      .then((uploaded) => {
-        setForm((prev) => ({ ...prev, image: uploaded.url }));
+      .then((blob) => uploadImageToServer(blob))
+      .then((url) => {
+        setForm((prev) => ({ ...prev, image: url }));
       })
       .catch((err) => {
-        const msg = err?.message || "";
-        if (/access_denied|popup_closed|user aborted|immediate_failed|blocked|popup/i.test(msg)) {
-          setFormError(
-            "Google sign-in was cancelled or the popup was blocked. Allow popups for this site, then try again."
-          );
-        } else {
-          setFormError(msg || "Could not upload the image to Google Drive.");
-        }
+        setFormError(err?.message || "Could not upload the image. Please try again.");
       })
       .finally(() => setUploading(false));
   }
@@ -218,10 +190,8 @@ export default function DashboardProductsPage() {
     try {
       if (form.id) {
         const existing = products.find((product) => product.id === form.id);
-        const oldDriveId = existing ? getDriveFileId(existing.image) : null;
-        const newDriveId = getDriveFileId(form.image);
-        if (oldDriveId && oldDriveId !== newDriveId) {
-          deleteDriveFile(oldDriveId).catch(() => {});
+        if (existing && existing.image !== form.image) {
+          deleteImageFromServer(existing.image);
         }
         await updateProduct(form.id, toProductData(form));
       } else {
@@ -239,10 +209,9 @@ export default function DashboardProductsPage() {
   async function handleDelete() {
     setFormError("");
     const target = products.find((product) => product.id === deleteId);
-    const driveId = target ? getDriveFileId(target.image) : null;
     try {
-      if (driveId) {
-        await deleteDriveFile(driveId).catch(() => {});
+      if (target) {
+        await deleteImageFromServer(target.image);
       }
       await removeProduct(deleteId);
       setDeleteId(null);
@@ -626,29 +595,9 @@ export default function DashboardProductsPage() {
                       {uploading ? (
                         <div className="flex items-center gap-2 px-3 py-2 text-sm text-text-secondary-light dark:text-text-secondary-dark">
                           <div className="w-4 h-4 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
-                          {driveConnected
-                            ? "Uploading to Google Drive..."
-                            : "Connecting to Google Drive..."}
-                        </div>
-                      ) : !driveConnected ? (
-                        <div className="flex flex-col items-start gap-2">
-                          <button
-                            type="button"
-                            onClick={handleConnectDrive}
-                            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium sk-btn rounded-lg"
-                          >
-                            <HardDrive className="w-4 h-4" />
-                            Connect Google Drive
-                          </button>
-                          <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
-                            Connect once to allow photos to be saved to your
-                            Google Drive.
-                          </p>
+                          Uploading image...
                         </div>
                       ) : (
-                        <></>
-                      )}
-                      {driveConnected && (
                         <>
                           <div className="flex flex-wrap items-center gap-2">
                             <label
@@ -688,8 +637,8 @@ export default function DashboardProductsPage() {
                             />
                           </div>
                           <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
-                            JPG, PNG, or WEBP. Images are compressed and stored
-                            in Google Drive.
+                            JPG, PNG, or WEBP. Images are compressed and saved to
+                            the store&apos;s Google Drive.
                           </p>
                         </>
                       )}
