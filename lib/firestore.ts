@@ -10,6 +10,8 @@ import {
   orderBy,
   updateDoc,
   setDoc,
+  increment,
+  runTransaction,
   type Unsubscribe,
   type QueryDocumentSnapshot,
 } from "firebase/firestore";
@@ -19,11 +21,14 @@ import type {
   ProductInput,
   ContactMessage,
   ContactMessageInput,
+  Sale,
+  SaleInput,
   SettingsData,
 } from "./types";
 
 const PRODUCTS_COLLECTION = "products";
 const MESSAGES_COLLECTION = "messages";
+const SALES_COLLECTION = "sales";
 const SETTINGS_DOC = "settings/admin";
 
 function requireDb() {
@@ -121,6 +126,77 @@ export async function getProducts(): Promise<Product[]> {
   );
   const snapshot = await getDocs(q);
   return snapshot.docs.map((doc) => mapDoc<Product>(doc));
+}
+
+export async function recordSale(
+  productId: string,
+  saleData: SaleInput
+): Promise<void> {
+  const dbInstance = requireDb();
+  await runTransaction(dbInstance, async (transaction) => {
+    const productRef = doc(dbInstance, PRODUCTS_COLLECTION, productId);
+    const productSnap = await transaction.get(productRef);
+    if (!productSnap.exists()) {
+      throw new Error("Could not find the selected product.");
+    }
+    const currentStock = (productSnap.data().stock as number) ?? 0;
+    if (saleData.quantity > currentStock) {
+      throw new Error(
+        `Not enough stock. Only ${currentStock} unit${currentStock === 1 ? "" : "s"} available.`
+      );
+    }
+    transaction.update(productRef, {
+      stock: increment(-saleData.quantity),
+      updatedAt: new Date().toISOString(),
+    });
+    const saleRef = doc(collection(dbInstance, SALES_COLLECTION));
+    transaction.set(saleRef, {
+      ...saleData,
+      createdAt: new Date().toISOString(),
+    });
+  });
+}
+
+export function subscribeToSales(
+  callback: (sales: Sale[]) => void,
+  onError?: (error: Error) => void
+): Unsubscribe {
+  const q = query(
+    collection(requireDb(), SALES_COLLECTION),
+    orderBy("createdAt", "desc")
+  );
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const sales = snapshot.docs.map((doc) => mapDoc<Sale>(doc));
+      callback(sales);
+    },
+    onError
+  );
+}
+
+export async function deleteSale(saleId: string): Promise<void> {
+  const dbInstance = requireDb();
+  await runTransaction(dbInstance, async (transaction) => {
+    const saleRef = doc(dbInstance, SALES_COLLECTION, saleId);
+    const saleSnap = await transaction.get(saleRef);
+    if (!saleSnap.exists()) {
+      transaction.delete(saleRef);
+      return;
+    }
+    const sale = saleSnap.data() as Sale;
+    if (sale.productId) {
+      const productRef = doc(dbInstance, PRODUCTS_COLLECTION, sale.productId);
+      const productSnap = await transaction.get(productRef);
+      if (productSnap.exists()) {
+        transaction.update(productRef, {
+          stock: increment(sale.quantity),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+    }
+    transaction.delete(saleRef);
+  });
 }
 
 export async function getSettingsDoc(): Promise<SettingsData | null> {

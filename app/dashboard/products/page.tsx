@@ -186,11 +186,6 @@ export default function DashboardProductsPage() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setFormError("");
-    const image = form.image.trim();
-    if (!image) {
-      setFormError("Please upload or take a photo for the product.");
-      return;
-    }
     setSaving(true);
     try {
       if (form.id) {
@@ -573,7 +568,7 @@ export default function DashboardProductsPage() {
 
                 <div className="sm:col-span-2">
                   <label className="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-1.5">
-                    Image
+                    Image (optional)
                   </label>
                   <div className="flex items-center gap-4">
                     {form.image ? (
@@ -644,8 +639,8 @@ export default function DashboardProductsPage() {
                             />
                           </div>
                           <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
-                            JPG, PNG, or WEBP. Images are compressed and saved to
-                            the store&apos;s Google Drive.
+                            Optional. JPG, PNG, or WEBP. Images are compressed and
+                            saved to the store&apos;s Google Drive.
                           </p>
                         </>
                       )}

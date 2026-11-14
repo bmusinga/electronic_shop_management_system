@@ -46,4 +46,22 @@ export interface ContactMessageInput {
   message: string;
 }
 
+export interface Sale {
+  id: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  createdAt?: string;
+}
+
+export interface SaleInput {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+
 export type SettingsData = Record<string, string>;

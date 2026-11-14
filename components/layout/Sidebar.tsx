@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Package,
   MessageSquare,
+  ShoppingCart,
   Settings,
   LogOut,
   Sun,
@@ -27,6 +28,7 @@ const sidebarLinks: SidebarLink[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/products", label: "Products", icon: Package },
   { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
+  { href: "/dashboard/sales", label: "Sales", icon: ShoppingCart },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
