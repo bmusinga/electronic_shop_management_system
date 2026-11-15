@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Mail, Trash2, Inbox, User, CalendarClock } from "lucide-react";
-import { subscribeToMessages, removeMessage } from "@/lib/firestore";
+import { useCollectionStream } from "@/hooks/useCollectionStream";
+import { apiFetch } from "@/lib/client-api";
 import type { ContactMessage } from "@/lib/types";
 
 function formatDate(value?: string): string {
@@ -18,35 +19,27 @@ function formatDate(value?: string): string {
 }
 
 export default function DashboardMessagesPage() {
-  const [messages, setMessages] = useState<ContactMessage[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
+  const {
+    data: messages,
+    loading,
+    error: streamError,
+  } = useCollectionStream<ContactMessage>("/api/messages/stream", "messages");
+  const [actionError, setActionError] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const unsubscribe = subscribeToMessages(
-      (items) => {
-        setMessages(items);
-        setLoading(false);
-        setLoadError("");
-      },
-      () => {
-        setLoadError(
-          "Could not load messages. Make sure the Firestore database is created and read rules are enabled."
-        );
-        setLoading(false);
-      }
-    );
-    return unsubscribe;
-  }, []);
+  const loadError = streamError || actionError;
 
   async function handleDelete() {
     if (!deleteId) return;
+    setActionError("");
     try {
-      await removeMessage(deleteId);
+      await apiFetch<{ ok: boolean }>(`/api/messages/${deleteId}`, {
+        method: "DELETE",
+      });
       setDeleteId(null);
     } catch (err) {
-      setLoadError("Could not delete the message. Check your Firestore write rules and try again.");
+      setActionError(
+        err instanceof Error ? err.message : "Could not delete the message."
+      );
       setDeleteId(null);
     }
   }

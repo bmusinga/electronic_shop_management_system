@@ -1,9 +1,10 @@
 import "server-only";
 
-const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID;
+const CLIENT_ID = process.env.GOOGLE_DRIVE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_DRIVE_CLIENT_SECRET;
 const REFRESH_TOKEN = process.env.GOOGLE_DRIVE_REFRESH_TOKEN;
-const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+const PRODUCTS_FOLDER_ID = process.env.GOOGLE_DRIVE_PRODUCTS_FOLDER_ID;
+const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 
 interface TokenResponse {
@@ -25,9 +26,18 @@ let tokenExpiresAt = 0;
 function requireConfig(): void {
   if (!CLIENT_ID || !CLIENT_SECRET || !REFRESH_TOKEN) {
     throw new Error(
-      "Google Drive server credentials are not configured. Set NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID, GOOGLE_DRIVE_CLIENT_SECRET, and GOOGLE_DRIVE_REFRESH_TOKEN."
+      "Google Drive server credentials are not configured. Set GOOGLE_DRIVE_CLIENT_ID, GOOGLE_DRIVE_CLIENT_SECRET, and GOOGLE_DRIVE_REFRESH_TOKEN."
     );
   }
+}
+
+function requireProductsFolderId(): string {
+  if (!PRODUCTS_FOLDER_ID) {
+    throw new Error(
+      "The product image folder is not configured. Set GOOGLE_DRIVE_PRODUCTS_FOLDER_ID to the EshopIMGs folder ID."
+    );
+  }
+  return PRODUCTS_FOLDER_ID;
 }
 
 async function getAccessToken(): Promise<string> {
@@ -71,11 +81,13 @@ export async function uploadImageToDrive(
   fileName?: string
 ): Promise<DriveUploadResult> {
   const token = await getAccessToken();
+  const folderId = requireProductsFolderId();
   const name = fileName || `product-${Date.now()}.jpg`;
   const mediaType = mimeType || "image/jpeg";
   const metadata = {
     name,
     mimeType: mediaType,
+    parents: [folderId],
   };
 
   const formData = new FormData();
@@ -98,6 +110,11 @@ export async function uploadImageToDrive(
     }
   );
   if (!uploadRes.ok) {
+    if (uploadRes.status === 404) {
+      throw new Error(
+        "Google Drive could not find the product image folder. Check GOOGLE_DRIVE_PRODUCTS_FOLDER_ID, then re-run /api/drive/setup so the app has full Drive access."
+      );
+    }
     throw new Error(
       `Google Drive upload failed (status ${uploadRes.status}).`
     );
@@ -142,14 +159,21 @@ export async function deleteDriveFile(fileId: string): Promise<void> {
   );
 }
 
-export function getDriveAuthUrl(redirectUri: string): string {
+export function getDriveAuthUrl(redirectUri: string, state: string): string {
+  if (!CLIENT_ID || !CLIENT_SECRET) {
+    throw new Error(
+      "Google Drive OAuth credentials are not configured. Set GOOGLE_DRIVE_CLIENT_ID and GOOGLE_DRIVE_CLIENT_SECRET."
+    );
+  }
+
   const params = new URLSearchParams({
-    client_id: CLIENT_ID as string,
+    client_id: CLIENT_ID,
     redirect_uri: redirectUri,
     response_type: "code",
     scope: DRIVE_SCOPE,
     access_type: "offline",
     prompt: "consent",
+    state,
   });
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
@@ -158,10 +182,16 @@ export async function exchangeCodeForToken(
   code: string,
   redirectUri: string
 ): Promise<CodeExchangeResult> {
+  if (!CLIENT_ID || !CLIENT_SECRET) {
+    throw new Error(
+      "Google Drive OAuth credentials are not configured. Set GOOGLE_DRIVE_CLIENT_ID and GOOGLE_DRIVE_CLIENT_SECRET."
+    );
+  }
+
   const params = new URLSearchParams({
     code,
-    client_id: CLIENT_ID as string,
-    client_secret: CLIENT_SECRET as string,
+    client_id: CLIENT_ID,
+    client_secret: CLIENT_SECRET,
     redirect_uri: redirectUri,
     grant_type: "authorization_code",
   });

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { MapPin, Phone, Mail, Clock, Send } from "lucide-react";
-import { saveMessage } from "@/lib/firestore";
+import { apiFetch } from "@/lib/client-api";
 import type { ContactMessageInput } from "@/lib/types";
 
 const subjects = [
@@ -40,10 +40,13 @@ export default function ContactPage() {
       message: formData.message,
     };
     try {
-      await saveMessage(payload);
+      await apiFetch<{ id: string }>("/api/messages", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
       setSubmitted(true);
       setFormData({ name: "", email: "", subject: "", message: "" });
-    } catch (err) {
+    } catch {
       setSubmitted(false);
       window.alert("Could not send your message. Please try again later.");
     }

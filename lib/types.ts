@@ -6,6 +6,7 @@ export interface Product {
   category: string;
   stock: number;
   image: string;
+  driveFileId?: string;
   rating?: number;
   createdAt?: string;
   updatedAt?: string;
@@ -18,6 +19,7 @@ export interface ProductInput {
   category: string;
   stock: number;
   image: string;
+  driveFileId?: string;
 }
 
 export interface ProductFormValues {
@@ -28,6 +30,7 @@ export interface ProductFormValues {
   category: string;
   stock: string;
   image: string;
+  driveFileId: string;
 }
 
 export interface ContactMessage {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Plus,
   Trash2,
@@ -11,12 +11,8 @@ import {
   AlertCircle,
   PackageX,
 } from "lucide-react";
-import {
-  subscribeToProducts,
-  subscribeToSales,
-  recordSale,
-  deleteSale,
-} from "@/lib/firestore";
+import { useCollectionStream } from "@/hooks/useCollectionStream";
+import { apiFetch } from "@/lib/client-api";
 import type { Product, Sale } from "@/lib/types";
 
 function formatDate(value?: string): string {
@@ -39,10 +35,17 @@ function formatMoney(value: number): string {
 }
 
 export default function DashboardSalesPage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
+  const {
+    data: products,
+    loading: productsLoading,
+    error: productsError,
+  } = useCollectionStream<Product>("/api/products/stream", "products");
+  const {
+    data: sales,
+    loading: salesLoading,
+    error: salesError,
+  } = useCollectionStream<Sale>("/api/sales/stream", "sales");
+  const [actionError, setActionError] = useState("");
   const [saving, setSaving] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -51,38 +54,8 @@ export default function DashboardSalesPage() {
   const [quantity, setQuantity] = useState("1");
   const [unitPrice, setUnitPrice] = useState("");
 
-  useEffect(() => {
-    const unsubscribeProducts = subscribeToProducts(
-      (items) => {
-        setProducts(items);
-        setLoading(false);
-        setLoadError("");
-      },
-      () => {
-        setLoadError(
-          "Could not load products. Make sure the Firestore database is created and read rules are enabled."
-        );
-        setLoading(false);
-      }
-    );
-    const unsubscribeSales = subscribeToSales(
-      (items) => {
-        setSales(items);
-        setLoading(false);
-        setLoadError("");
-      },
-      () => {
-        setLoadError(
-          "Could not load sales. Make sure the Firestore database is created and read rules are enabled."
-        );
-        setLoading(false);
-      }
-    );
-    return () => {
-      unsubscribeProducts();
-      unsubscribeSales();
-    };
-  }, []);
+  const loading = productsLoading || salesLoading;
+  const loadError = productsError || salesError || actionError;
 
   const selectedProduct = products.find((p) => p.id === productId) || null;
 
@@ -133,20 +106,21 @@ export default function DashboardSalesPage() {
       return;
     }
     setSaving(true);
+    setActionError("");
     try {
-      await recordSale(selectedProduct.id, {
-        productId: selectedProduct.id,
-        productName: selectedProduct.name,
-        quantity: quantityNum,
-        unitPrice: unitPriceNum,
-        total,
+      await apiFetch<{ ok: boolean }>("/api/sales", {
+        method: "POST",
+        body: JSON.stringify({
+          productId: selectedProduct.id,
+          productName: selectedProduct.name,
+          quantity: quantityNum,
+          unitPrice: unitPriceNum,
+        }),
       });
       setIsModalOpen(false);
     } catch (err) {
       setFormError(
-        err instanceof Error
-          ? err.message
-          : "Could not record the sale. Check your Firestore write rules and try again."
+        err instanceof Error ? err.message : "Could not record the sale."
       );
     } finally {
       setSaving(false);
@@ -155,12 +129,15 @@ export default function DashboardSalesPage() {
 
   async function handleDelete() {
     if (!deleteId) return;
+    setActionError("");
     try {
-      await deleteSale(deleteId);
+      await apiFetch<{ ok: boolean }>(`/api/sales/${deleteId}`, {
+        method: "DELETE",
+      });
       setDeleteId(null);
-    } catch {
-      setLoadError(
-        "Could not delete the sale. Check your Firestore write rules and try again."
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : "Could not delete the sale."
       );
       setDeleteId(null);
     }

@@ -8,22 +8,18 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import {
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  reauthenticateWithCredential,
-  EmailAuthProvider,
-  updatePassword,
-  type User,
-  type UserCredential,
-} from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/client-api";
+
+export interface AuthUser {
+  uid: string;
+  email?: string;
+}
 
 interface AuthContextValue {
-  user: User | null;
+  user: AuthUser | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<UserCredential>;
+  signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
@@ -31,58 +27,56 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const router = useRouter();
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!auth) {
-      const timeout: ReturnType<typeof setTimeout> = setTimeout(
-        () => setLoading(false),
-        0
-      );
-      return () => clearTimeout(timeout);
-    }
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
+    let active = true;
+
+    apiFetch<{ user: AuthUser | null }>("/api/auth/session", {
+      cache: "no-store",
+    })
+      .then((data) => {
+        if (active) {
+          setUser(data.user);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setUser(null);
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const signIn = useCallback(async (email: string, password: string) => {
+    const data = await apiFetch<{ user: AuthUser }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
     });
-    return () => unsubscribe();
+    setUser(data.user);
   }, []);
 
-  const signIn = useCallback(
-    async (email: string, password: string): Promise<UserCredential> => {
-      if (!auth) {
-        throw new Error(
-          "Firebase is not configured. Please set the NEXT_PUBLIC_FIREBASE_* environment variables."
-        );
-      }
-      return signInWithEmailAndPassword(auth, email, password);
-    },
-    []
-  );
-
-  const signOut = useCallback(async (): Promise<void> => {
-    if (!auth) {
-      return;
-    }
-    await firebaseSignOut(auth);
-  }, []);
+  const signOut = useCallback(async () => {
+    await apiFetch<{ ok: boolean }>("/api/auth/logout", { method: "POST" });
+    setUser(null);
+    router.replace("/login");
+  }, [router]);
 
   const changePassword = useCallback(
-    async (currentPassword: string, newPassword: string): Promise<void> => {
-      if (!auth || !user) {
-        throw new Error(
-          "You must be signed in to change your password."
-        );
-      }
-      const credential = EmailAuthProvider.credential(
-        user.email || "",
-        currentPassword
-      );
-      await reauthenticateWithCredential(user, credential);
-      await updatePassword(user, newPassword);
+    async (currentPassword: string, newPassword: string) => {
+      await apiFetch<{ ok: boolean }>("/api/auth/password", {
+        method: "POST",
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
     },
-    [user]
+    []
   );
 
   return (

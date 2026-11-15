@@ -6,10 +6,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { Zap, Eye, EyeOff, ArrowLeft, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
-interface FirebaseAuthError {
-  code?: string;
-}
-
 export default function LoginPage() {
   const router = useRouter();
   const { user, loading, signIn } = useAuth();
@@ -37,20 +33,9 @@ export default function LoginPage() {
       setRedirecting(true);
       router.push("/dashboard");
     } catch (err) {
-      const code = (err as FirebaseAuthError).code;
-      if (code === "auth/user-not-found") {
-        setError("No account found with this email address.");
-      } else if (code === "auth/wrong-password") {
-        setError("Incorrect password. Please try again.");
-      } else if (code === "auth/invalid-email") {
-        setError("Please enter a valid email address.");
-      } else if (code === "auth/too-many-requests") {
-        setError("Too many failed attempts. Please try again later.");
-      } else if (code === "auth/invalid-credential") {
-        setError("Invalid email or password. Please try again.");
-      } else {
-        setError("An error occurred. Please try again.");
-      }
+      setError(
+        err instanceof Error ? err.message : "An error occurred. Please try again."
+      );
     } finally {
       setSigningIn(false);
     }

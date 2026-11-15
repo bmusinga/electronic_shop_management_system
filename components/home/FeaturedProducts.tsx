@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowRight, Star, ShoppingCart } from "lucide-react";
 import ProductImage from "@/components/ui/ProductImage";
+import { apiFetch } from "@/lib/client-api";
 import { getStockStatus, type StockStatus } from "@/lib/stock";
-import { subscribeToProducts } from "@/lib/firestore";
 import type { Product } from "@/lib/types";
 
 function getStockBadgeColor(status: StockStatus): string {
@@ -77,16 +77,24 @@ export default function FeaturedProducts() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = subscribeToProducts(
-      (items) => {
-        setProducts(items.slice(0, 6));
-        setLoaded(true);
-      },
-      () => {
-        setLoaded(true);
-      }
-    );
-    return unsubscribe;
+    let active = true;
+
+    apiFetch<Product[]>("/api/products", { cache: "no-store" })
+      .then((items) => {
+        if (active) {
+          setProducts(items.slice(0, 6));
+          setLoaded(true);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setLoaded(true);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   return (

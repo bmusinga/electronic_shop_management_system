@@ -1,6 +1,5 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
 import {
   Package,
   ShoppingBag,
@@ -19,7 +18,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { subscribeToProducts } from "@/lib/firestore";
+import { useCollectionStream } from "@/hooks/useCollectionStream";
 import { getStockStatus, getStockBadgeClass } from "@/lib/stock";
 import type { Product } from "@/lib/types";
 
@@ -92,25 +91,16 @@ function CategoryTooltip({ active, payload, label }: CategoryTooltipProps) {
 }
 
 export default function DashboardPage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: products, loading } = useCollectionStream<Product>(
+    "/api/products/stream",
+    "products"
+  );
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
   });
-
-  useEffect(() => {
-    const unsubscribe = subscribeToProducts(
-      (items) => {
-        setProducts(items);
-        setLoading(false);
-      },
-      () => setLoading(false)
-    );
-    return unsubscribe;
-  }, []);
 
   const stats: Record<StatKey, number> = {
     total: products.length,

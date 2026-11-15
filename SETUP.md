@@ -2,288 +2,305 @@
 
 ## Prerequisites
 
-Before you begin, make sure you have the following installed:
-- **Node.js** (v18 or later) -- download from https://nodejs.org
+- **Node.js** v18 or later: https://nodejs.org
 - **npm** (comes with Node.js)
-- A **Google account** (for Firebase)
-- A **Vercel account** (for deployment) -- sign up free at https://vercel.com
+- A **Google account** for Firebase and Google Drive
+- A **Vercel account** for deployment: https://vercel.com
+
+> **Security model:** every environment variable is now server-only. The browser talks only to same-origin Next.js API routes, and the server uses the Firebase Admin SDK. No Firebase or Drive credentials are included in the client bundle.
 
 ---
 
 ## Step 1: Create a Firebase Project
 
 1. Go to https://console.firebase.google.com
-2. Click **"Add project"**
-3. Enter a project name (e.g., `voltex-electronics`)
-4. Uncheck "Google Analytics" if you don't need it (optional)
-5. Click **"Create project"**
-6. Wait for it to finish, then click **"Continue"**
+2. Click **Add project**
+3. Enter a project name, then click **Create project**
+4. Open the project when it finishes
 
 ---
 
-## Step 2: Set Up Firebase Authentication
+## Step 2: Enable Firebase Authentication
 
-1. In the Firebase console, click **"Authentication"** in the left sidebar
-2. Click **"Get started"**
-3. Under "Sign-in providers", click **"Email/Password"**
-4. Toggle **Enable** on
-5. Uncheck "Email link (passwordless sign-in)" if you only want password login
-6. Click **"Save"**
+1. Click **Authentication** in the left sidebar
+2. Click **Get started**
+3. Under **Sign-in providers**, open **Email/Password**
+4. Enable it and click **Save**
 
-### Create an Admin Account
+### Create an admin account
 
-1. Go to **Authentication > Users** tab
-2. Click **"Add user"**
-3. Enter an email and password for your admin account (e.g., `admin@voltex.com`)
-4. Click **"Save"**
-5. **Write down these credentials** -- you will use them to log into the dashboard
+1. Open **Authentication > Users**
+2. Click **Add user**
+3. Enter the admin email and password
+4. Click **Save**
+
+You will use this email and password to sign in to the dashboard.
 
 ---
 
-## Step 3: Set Up Firebase Firestore
+## Step 3: Create Firestore
 
-1. In the Firebase console, click **"Firestore Database"** in the left sidebar
-2. Click **"Create database"**
-3. Choose a location (pick the one closest to your users, e.g., `us-central1`)
-4. Select **"Start in test mode"** for now
-5. Click **"Enable"**
+1. Click **Firestore Database** in the left sidebar
+2. Click **Create database**
+3. Pick a location close to your users
+4. Click **Enable**
 
-### Set Up Security Rules
+### Set deny-all security rules
 
-1. In Firestore, click the **"Rules"** tab
-2. Replace the default rules with the following:
+The app uses the Firebase Admin SDK on the server, which bypasses Firestore security rules. The rules should deny direct browser access completely.
+
+1. Open Firestore **Rules**
+2. Replace the rules with:
 
 ```
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Products collection - anyone can read, only authenticated users can write
-    match /products/{productId} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-
-    // Settings collection - only authenticated users can read/write
-    match /settings/{settingId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-
-    // Orders collection - only authenticated users can read/write
-    match /orders/{orderId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
 ```
 
-3. Click **"Publish"**
+3. Click **Publish**
+
+The same rules are stored in `firestore.rules` in this repo.
 
 ---
 
-## Step 4: Get Your Firebase Config Keys
+## Step 4: Create a Firebase Service Account
 
-1. In the Firebase console, click the **gear icon** (top-left) > **"Project settings"**
-2. Scroll down to the **"Your apps"** section
-3. If you don't see a web app yet, click the **web icon** (`</>`) to add one
-4. Enter a nickname (e.g., `voltex-web`)
-5. Click **"Register app"**
-6. You will see a config object that looks like this:
+The server needs a service account to read and write Firestore and to manage Firebase Auth users.
 
-```javascript
-const firebaseConfig = {
-  apiKey: "AIzaSy...",
-  authDomain: "voltex-electronics.firebaseapp.com",
-  projectId: "voltex-electronics",
-  storageBucket: "voltex-electronics.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abc123"
-};
+1. In Firebase, open **Project settings** (gear icon)
+2. Open the **Service accounts** tab
+3. Click **Generate new private key**
+4. Save the JSON file somewhere private. **Never commit it to git.**
+5. Base64-encode the JSON.
+
+PowerShell:
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\path\to\service-account.json")) | Set-Clipboard
 ```
 
-7. Copy each value and paste it into your `.env.local` file:
+macOS/Linux:
+
+```bash
+base64 -w 0 service-account.json
+```
+
+Paste the result into `FIREBASE_SERVICE_ACCOUNT_BASE64`.
+
+---
+
+## Step 5: Get the Firebase Web API Key
+
+The server uses Firebase Identity Toolkit to verify email/password logins. It needs the Firebase web API key.
+
+1. Open **Project settings > General**
+2. Scroll to **Your apps**
+3. If there is no web app, click the web icon (`</>`) and register one
+4. Copy the `apiKey` value from the Firebase config
+
+You also need the other config values for completeness. They are retained as server-only variables but are no longer used by the browser:
 
 ```
-NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSy...
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=voltex-electronics.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=voltex-electronics
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=voltex-electronics.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
-NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abc123
+FIREBASE_API_KEY=AIzaSy...
+FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+FIREBASE_PROJECT_ID=your-project
+FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
+FIREBASE_MESSAGING_SENDER_ID=123456789
+FIREBASE_APP_ID=1:123456789:web:abc123
 ```
 
 ---
 
-## Step 5: Test Locally
+## Step 6: Set Up Google Drive for Product Images
 
-1. Open a terminal in your project folder
-2. Run:
+Product photos are stored in your Google Drive and shown publicly on the site. The server uses a saved refresh token, so no Google sign-in popup appears in the dashboard.
+
+### 6a. Google Cloud setup (one time)
+
+1. Go to https://console.cloud.google.com
+2. Create or select a project
+3. Enable the **Google Drive API** under **APIs & Services > Library**
+4. Configure the **OAuth consent screen**:
+   - Choose **External**
+   - Add your app name and email
+   - Add the Drive account you want to use as a **Test user**
+   - Add the scope `https://www.googleapis.com/auth/drive`
+   - Publish the app to **In production** so refresh tokens do not expire every 7 days
+5. Create an **OAuth client ID**:
+   - Go to **APIs & Services > Credentials**
+   - Click **Create credentials > OAuth client ID**
+   - Choose **Web application**
+   - Add authorized JavaScript origins:
+     - `http://localhost:3000`
+     - `https://YOUR-SITE.vercel.app`
+   - Add authorized redirect URIs:
+     - `http://localhost:3000/api/drive/callback`
+     - `https://YOUR-SITE.vercel.app/api/drive/callback`
+   - Click **Create**
+   - Copy the **Client ID** and **Client Secret**
+6. In Google Drive, create a folder named `EshopIMGs`
+7. Open the folder and copy the folder ID from the URL:
+   `https://drive.google.com/drive/folders/FOLDER_ID_HERE`
+
+### 6b. Add the Drive variables
+
+```
+GOOGLE_DRIVE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_DRIVE_CLIENT_SECRET=your-client-secret
+GOOGLE_DRIVE_REFRESH_TOKEN=(paste from step 6c)
+GOOGLE_DRIVE_PRODUCTS_FOLDER_ID=(the EshopIMGs folder ID)
+```
+
+### 6c. Get the refresh token (one time)
+
+1. Start the app with `npm run dev`
+2. Sign in to the dashboard at http://localhost:3000/login
+3. Open http://localhost:3000/api/drive/setup
+4. Sign in to the Google account whose Drive you want to use and click **Allow**
+5. Copy the refresh token shown after the redirect
+6. Paste it into `GOOGLE_DRIVE_REFRESH_TOKEN` in `.env.local` and in Vercel
+7. Restart the dev server or redeploy
+
+`/api/drive/setup` now requires an admin dashboard session and uses an OAuth state cookie. The callback also requires the dashboard session.
+
+> **Keep the refresh token secret.** Anyone with it can upload files to your Drive account.
+>
+> **Deleting images:** deleting a product, or replacing its image, deletes the old Drive file automatically.
+
+---
+
+## Step 7: Configure `.env.local`
+
+Your `.env.local` should contain these names:
+
+```
+FIREBASE_API_KEY=
+FIREBASE_AUTH_DOMAIN=
+FIREBASE_PROJECT_ID=
+FIREBASE_STORAGE_BUCKET=
+FIREBASE_MESSAGING_SENDER_ID=
+FIREBASE_APP_ID=
+FIREBASE_SERVICE_ACCOUNT_BASE64=
+GOOGLE_DRIVE_CLIENT_ID=
+GOOGLE_DRIVE_CLIENT_SECRET=
+GOOGLE_DRIVE_REFRESH_TOKEN=
+GOOGLE_DRIVE_PRODUCTS_FOLDER_ID=
+```
+
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `FIREBASE_API_KEY` | Yes | Server-side email/password verification |
+| `FIREBASE_AUTH_DOMAIN` | Retained | Kept for compatibility; not used by the browser |
+| `FIREBASE_PROJECT_ID` | Yes | Firebase project ID |
+| `FIREBASE_STORAGE_BUCKET` | Retained | Kept for compatibility; not used by the browser |
+| `FIREBASE_MESSAGING_SENDER_ID` | Retained | Kept for compatibility; not used by the browser |
+| `FIREBASE_APP_ID` | Retained | Kept for compatibility; not used by the browser |
+| `FIREBASE_SERVICE_ACCOUNT_BASE64` | Yes | Firebase Admin SDK credentials |
+| `GOOGLE_DRIVE_CLIENT_ID` | Yes | Drive OAuth client ID |
+| `GOOGLE_DRIVE_CLIENT_SECRET` | Yes | Drive OAuth client secret |
+| `GOOGLE_DRIVE_REFRESH_TOKEN` | Yes | Drive refresh token |
+| `GOOGLE_DRIVE_PRODUCTS_FOLDER_ID` | Yes | The `EshopIMGs` folder ID |
+
+> **Do not add `NEXT_PUBLIC_` to any of these names.** In Vercel, `NEXT_PUBLIC_*` values are exposed to the browser and cannot be marked as Secret.
+
+---
+
+## Step 8: Test Locally
+
+1. Run:
+
    ```bash
    npm run dev
    ```
-3. Open http://localhost:3000 in your browser
-4. Check that all pages load correctly:
-   - Home page (carousel, products, FAQs)
-   - About page
-   - Products page
-   - Contact page
-5. Test dark/light mode toggle (sun/moon icon in navbar)
-6. Go to http://localhost:3000/login
-7. Sign in with the admin credentials you created in Step 2
-8. You should be redirected to the dashboard
-9. Check the dashboard overview (stats cards, revenue chart)
-10. Go to Dashboard > Products and test adding/removing products
-11. Products you add here are stored in Firestore and will appear on the public Products page
+
+2. Open http://localhost:3000 and check the public pages:
+   - Home
+   - About
+   - Products
+   - Contact
+3. Test the theme toggle
+4. Open http://localhost:3000/login and sign in with the admin account
+5. You should be redirected to `/dashboard`
+6. Check the overview, products, messages, sales, and settings pages
+7. Add a product with an image and confirm it appears on the public products page
+8. Send a contact message and confirm it appears under Dashboard > Messages
+
+Dashboard data updates live over Server-Sent Events (SSE). Public product pages fetch once.
 
 ---
 
-## Step 6: Seed Your Products in Firestore
+## Step 9: Deploy to Vercel
 
-After signing into the dashboard:
+### 9a. Push to GitHub
 
-1. Go to **Dashboard > Products**
-2. Click **"Add Product"**
-3. Fill in the details for each product:
-   - **Name**: e.g., "iPhone 15 Pro"
-   - **Description**: e.g., "Latest Apple flagship with A17 Pro chip"
-   - **Price**: e.g., 1199
-   - **Category**: Select from the dropdown
-   - **Stock**: e.g., 45
-   - **Image**: Click **"Upload from Device"** to pick a photo from your device or **"Take Photo"** to use your camera. The image is compressed, saved to your Google Drive, and a public link is stored with the product.
-4. Click **"Add Product"**
-5. Repeat for all products you want to display
-
-> **Note:** The first time you upload an image you will be asked to sign in to your Google account to allow the app to save images to your Drive. Files are stored in a hidden app folder and made publicly viewable so they appear on the site.
-
-The products page will pull from Firestore automatically once Firebase is configured.
-
----
-
-## Step 7: Set Up Google Drive for Product Images (required for photo uploads)
-
-Images you upload or capture in the dashboard are stored in your **free Google Drive** (15 GB) and shown publicly on the site. The app uses a **server-side token**, so photos are always saved to **your** Drive account from **any** device — no one ever has to sign in to Google from the dashboard.
-
-### 7a. Google Cloud setup (one time)
-
-1. Go to the **Google Cloud Console**: https://console.cloud.google.com
-2. Create a new project (or select an existing one), e.g. `voltex-electronics`
-3. Enable the **Google Drive API**:
-   - Go to **APIs & Services > Library**
-   - Search for **"Google Drive API"**, click it, then click **"Enable"**
-4. Configure the **OAuth consent screen**:
-   - Go to **APIs & Services > OAuth consent screen**
-   - Choose **External**, fill in the app name (e.g. "Voltex") and your email, then click **Save**
-   - Under **Test users**, click **Add users** and add the **email of the Drive account you want photos saved to**
-   - Under **Scopes**, add the scope: `https://www.googleapis.com/auth/drive.file`
-   - Click **Publish app > In production** so the token does not expire every 7 days. (Leave verification to Google; your app stays usable as an unverified personal app.)
-5. Create the **OAuth Client ID**:
-   - Go to **APIs & Services > Credentials**
-   - Click **"Create credentials" > "OAuth client ID"**
-   - Choose **Application type: Web application**
-   - Under **Authorized JavaScript origins**, add:
-     - `http://localhost:3000` (for local testing)
-     - `https://YOUR-SITE.vercel.app` (your live site URL, e.g. `https://voltex-electronics.vercel.app`)
-   - Under **Authorized redirect URIs**, add:
-     - `http://localhost:3000/api/drive/callback` (for local testing)
-     - `https://YOUR-SITE.vercel.app/api/drive/callback` (your live site)
-   - Click **"Create"** and copy the **Client ID** (ends in `.apps.googleusercontent.com`), and note the **Client Secret**
-
-### 7b. Add the credentials to your app
-
-In `.env.local`, set:
-
-```
-NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-GOOGLE_DRIVE_CLIENT_SECRET=your-client-secret
-GOOGLE_DRIVE_REFRESH_TOKEN=(paste from step 7c)
+```bash
+git init
+git add .
+git commit -m "Initial commit"
+git branch -M main
+git remote add origin https://github.com/YOUR_USERNAME/electronicsshop.git
+git push -u origin main
 ```
 
-### 7c. Get the refresh token (one time)
+### 9b. Import the project in Vercel
 
-1. Restart your dev server (`npm run dev`).
-2. Open this URL in your browser: `http://localhost:3000/api/drive/setup` (on the live site use `https://YOUR-SITE.vercel.app/api/drive/setup`).
-3. Sign in to the Google account whose Drive you want to use and click **Allow**. (If Google shows an "unverified app" screen, click **Advanced > Go to <app name> (unsafe)** — expected for personal apps.)
-4. You'll be redirected to a page showing a **refresh token** — copy it.
-5. Paste it into `GOOGLE_DRIVE_REFRESH_TOKEN` in `.env.local` (and in Vercel), then restart/redeploy.
+1. Go to https://vercel.com and click **Add new > Project**
+2. Import the repository
+3. Add every variable from `.env.local` under **Environment Variables**
+4. Mark every variable as **Sensitive**
+5. Click **Deploy**
 
-> **Important:** Keep the refresh token secret — anyone with it can upload to your Drive.
->
-> **Deleting images:** When you delete a product (or replace its image), the uploaded file is automatically deleted from your Drive too.
+Vercel does not allow variables beginning with `NEXT_PUBLIC_` to be marked as Secret. The renamed variables above are intentionally server-only.
 
----
+### SSE duration limits
 
-## Step 8: Deploy to Vercel
+The dashboard streams use a 280-second window and reconnect automatically. This stays below Vercel's limits:
 
-### 7a. Push Your Code to GitHub
-
-1. Create a new repository on GitHub (e.g., `voltex-electronics`)
-2. In your project folder, initialize git:
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit"
-   git branch -M main
-   git remote add origin https://github.com/YOUR_USERNAME/voltex-electronics.git
-   git push -u origin main
-   ```
-
-### 7b. Deploy on Vercel
-
-1. Go to https://vercel.com
-2. Sign in with your GitHub account
-3. Click **"Add new..." > "Project"**
-4. Find your `voltex-electronics` repository and click **"Import"**
-5. Before deploying, add your environment variables:
-   - Click **"Environment Variables"**
-   - Add each variable from your `.env.local` file:
-     | Name | Value |
-     |------|-------|
-     | `NEXT_PUBLIC_FIREBASE_API_KEY` | Your API key |
-     | `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Your auth domain |
-     | `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Your project ID |
-     | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Your storage bucket |
-     | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Your sender ID |
-     | `NEXT_PUBLIC_FIREBASE_APP_ID` | Your app ID |
-     | `NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID` | Your Google OAuth Client ID |
-      | `GOOGLE_DRIVE_CLIENT_SECRET` | Your Google OAuth Client Secret |
-      | `GOOGLE_DRIVE_REFRESH_TOKEN` | The refresh token from step 7c |
-6. Click **"Deploy"**
-7. Wait for the build to finish (usually 1-2 minutes)
-8. Your site is now live at the URL Vercel gives you (e.g., `voltex-electronics.vercel.app`)
-
----
-
-## Step 9: Set Up Your Custom Domain (Optional)
-
-1. In Vercel, go to your project > **"Settings" > "Domains"**
-2. Enter your domain name (e.g., `voltex.com`)
-3. Vercel will give you DNS records to add
-4. Go to your domain registrar (GoDaddy, Namecheap, etc.) and add those DNS records
-5. Wait for DNS propagation (can take up to 48 hours)
-6. Vercel will automatically issue an SSL certificate (HTTPS)
+- Hobby: 300 seconds maximum
+- Pro: 800 seconds maximum
 
 ---
 
 ## Troubleshooting
 
-### "Firebase: Error (auth/user-not-found)"
-- Make sure you created a user in Firebase Authentication (Step 2)
+### Login returns "FIREBASE_SERVICE_ACCOUNT_BASE64 is not configured"
 
-### "Firebase: Error (auth/wrong-password)"
-- Double-check the email and password you entered
+- Create the service account JSON in Firebase and base64-encode it
+- Paste the encoded value into `FIREBASE_SERVICE_ACCOUNT_BASE64`
+- Restart the dev server or redeploy
 
-### Products not showing on the public page
-- Check that Firestore is in "test mode" or your security rules allow public reads
-- Make sure your `.env.local` values match your Firebase config exactly
+### Products do not appear
 
-### Build fails with environment variable errors
-- Make sure all `NEXT_PUBLIC_FIREBASE_*` variables are set in `.env.local`
-- If deploying to Vercel, make sure they are added in the Vercel dashboard under Environment Variables
+- Firestore rules deny direct browser access by design. The app reads through the server API.
+- Check that `FIREBASE_SERVICE_ACCOUNT_BASE64` is valid and belongs to the same Firebase project
+- Check the Vercel function logs for Admin SDK errors
 
-### Dark mode not persisting
-- This is stored in localStorage. If using incognito mode, it will reset each session.
+### Product image upload fails with a Drive 404
+
+- Confirm `GOOGLE_DRIVE_PRODUCTS_FOLDER_ID` is the actual `EshopIMGs` folder ID
+- Re-run `/api/drive/setup` after changing the Drive scope
+- Confirm the OAuth consent screen includes `https://www.googleapis.com/auth/drive`
+
+### Upload is rejected as too large
+
+- Images are limited to **4 MB** per upload to stay within Vercel request-body limits
+- The dashboard compresses images before uploading, but very large originals can still be rejected
+
+### Vercel says a `NEXT_PUBLIC_*` variable cannot be Secret
+
+- Rename it by removing the `NEXT_PUBLIC_` prefix
+- This app no longer reads any `NEXT_PUBLIC_*` variables
+
+### Dark mode does not persist
+
+- Theme preference is stored in `localStorage`; incognito windows reset it each session
 
 ---
 
@@ -291,28 +308,31 @@ GOOGLE_DRIVE_REFRESH_TOKEN=(paste from step 7c)
 
 ```
 electronicsshop/
-├── app/                    # Pages (Next.js App Router)
-│   ├── page.js            # Home page
-│   ├── about/page.js      # About page
-│   ├── products/page.js   # Products catalog
-│   ├── contact/page.js    # Contact page
-│   ├── login/page.js      # Login page
-│   └── dashboard/         # Admin dashboard
-│       ├── page.js        # Dashboard overview
-│       ├── products/      # Product management
-│       └── settings/      # Settings
-├── components/             # Reusable UI components
-├── hooks/                  # Custom React hooks (theme, auth)
-├── lib/                    # Firebase config and helpers
-└── .env.local             # Your Firebase credentials (not committed to git)
+├── app/
+│   ├── api/
+│   │   ├── auth/          # login, logout, session, password
+│   │   ├── drive/         # upload, delete, setup, callback
+│   │   ├── messages/      # contact messages + SSE stream
+│   │   ├── products/      # products + SSE stream
+│   │   ├── sales/         # sales + SSE stream
+│   │   └── settings/      # store/profile settings
+│   ├── dashboard/         # admin dashboard
+│   ├── login/
+│   ├── products/
+│   └── contact/
+├── components/
+├── hooks/                 # useAuth, useCollectionStream, useTheme
+├── lib/                   # firebase-admin, session, firestore-admin, drive-server
+├── firestore.rules        # deny-all browser access
+└── .env.local             # local secrets, never committed
 ```
 
 ---
 
-## What Each Dashboard Section Does
+## Security Notes
 
-| Section | Description |
-|---------|-------------|
-| **Overview** | Shows total revenue, orders, products, and active users. Includes a revenue trend chart and recent orders table. |
-| **Products** | Full product management. Add new products, view stock levels, remove products. Data is stored in Firestore. |
-| **Settings** | Update your profile info, store details, and change your password. |
+- All 11 environment variables are server-only.
+- Session cookies are httpOnly, Secure in production, SameSite=Lax, and expire after 24 hours.
+- Session tokens are random and only a SHA-256 hash is stored in Firestore.
+- Any user created in Firebase Authentication can sign in to the dashboard.
+- The old Firebase web API key is not rotated, per the current project decision. It is no longer included in browser bundles, but anyone who already has it can still use it.

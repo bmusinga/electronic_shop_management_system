@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { Search, ShoppingCart, Filter } from "lucide-react";
 import ProductImage from "@/components/ui/ProductImage";
+import { apiFetch } from "@/lib/client-api";
 import { getStockStatus, getStockBadgeClass } from "@/lib/stock";
-import { subscribeToProducts } from "@/lib/firestore";
 import type { Product } from "@/lib/types";
 
 const categories = ["All", "Smartphones", "Laptops", "Audio", "Accessories", "Wearables"];
@@ -16,16 +16,24 @@ export default function ProductsPage() {
   const [activeCategory, setActiveCategory] = useState("All");
 
   useEffect(() => {
-    const unsubscribe = subscribeToProducts(
-      (items) => {
-        setProducts(items);
-        setLoading(false);
-      },
-      () => {
-        setLoading(false);
-      }
-    );
-    return unsubscribe;
+    let active = true;
+
+    apiFetch<Product[]>("/api/products", { cache: "no-store" })
+      .then((items) => {
+        if (active) {
+          setProducts(items);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const filteredProducts = products.filter((product) => {

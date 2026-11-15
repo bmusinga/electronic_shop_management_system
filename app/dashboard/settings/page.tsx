@@ -12,7 +12,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { getSettingsDoc, saveSettingsDoc } from "@/lib/firestore";
+import { apiFetch } from "@/lib/client-api";
 import type { SettingsData } from "@/lib/types";
 
 interface Toast {
@@ -73,7 +73,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     let active = true;
-    getSettingsDoc()
+    apiFetch<SettingsData>("/api/settings", { cache: "no-store" })
       .then((data) => {
         if (!active) return;
         if (data) {
@@ -124,10 +124,16 @@ export default function SettingsPage() {
         email: profile.email.trim(),
         phone: profile.phone.trim(),
       };
-      await saveSettingsDoc(data);
+      await apiFetch<{ ok: boolean }>("/api/settings", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
       flash("success", "Profile saved successfully");
-    } catch {
-      flash("error", "Could not save profile. Check your Firestore write rules.");
+    } catch (err) {
+      flash(
+        "error",
+        err instanceof Error ? err.message : "Could not save profile."
+      );
     } finally {
       setSavingProfile(false);
     }
@@ -142,10 +148,16 @@ export default function SettingsPage() {
         contactEmail: store.contactEmail.trim(),
         contactPhone: store.contactPhone.trim(),
       };
-      await saveSettingsDoc(data);
+      await apiFetch<{ ok: boolean }>("/api/settings", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
       flash("success", "Store settings saved successfully");
-    } catch {
-      flash("error", "Could not save store settings. Check your Firestore write rules.");
+    } catch (err) {
+      flash(
+        "error",
+        err instanceof Error ? err.message : "Could not save store settings."
+      );
     } finally {
       setSavingStore(false);
     }
@@ -170,11 +182,10 @@ export default function SettingsPage() {
       setPasswords({ current: "", new: "", confirm: "" });
       flash("success", "Password updated successfully");
     } catch (err) {
-      if ((err as { code?: string }).code === "auth/wrong-password") {
-        flash("error", "Current password is incorrect.");
-      } else {
-        flash("error", "Could not update password. Please try again.");
-      }
+      flash(
+        "error",
+        err instanceof Error ? err.message : "Could not update password."
+      );
     } finally {
       setSavingPassword(false);
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Plus,
   Trash2,
@@ -12,12 +12,8 @@ import {
   ImageIcon,
 } from "lucide-react";
 import ProductImage from "@/components/ui/ProductImage";
-import {
-  addProduct,
-  updateProduct,
-  removeProduct,
-  subscribeToProducts,
-} from "@/lib/firestore";
+import { useCollectionStream } from "@/hooks/useCollectionStream";
+import { apiFetch } from "@/lib/client-api";
 import { getStockStatus, getStockBadgeClass } from "@/lib/stock";
 import type { Product, ProductFormValues, ProductInput } from "@/lib/types";
 
@@ -70,6 +66,7 @@ const emptyForm: ProductFormValues = {
   category: "Smartphones",
   stock: "",
   image: "",
+  driveFileId: "",
 };
 
 function parseDriveFileId(url?: string | null): string | null {
@@ -81,21 +78,38 @@ function parseDriveFileId(url?: string | null): string | null {
   return match ? match[1] : null;
 }
 
-async function uploadImageToServer(blob: Blob): Promise<string> {
+async function uploadImageToServer(
+  blob: Blob
+): Promise<{ imageUrl: string; driveFileId: string }> {
   const formData = new FormData();
   formData.append("file", blob, `product-${Date.now()}.jpg`);
-  const res = await fetch("/api/drive/upload", { method: "POST", body: formData });
-  const data = (await res.json()) as { url?: string; error?: string };
-  if (!res.ok || !data.url) {
+  const res = await fetch("/api/drive/upload", {
+    method: "POST",
+    body: formData,
+  });
+  const data = (await res.json()) as {
+    success?: boolean;
+    imageUrl?: string;
+    driveFileId?: string;
+    error?: string;
+  };
+  if (!res.ok || !data.success || !data.imageUrl || !data.driveFileId) {
     throw new Error(data?.error || "Could not upload the image.");
   }
-  return data.url;
+  return { imageUrl: data.imageUrl, driveFileId: data.driveFileId };
 }
 
-async function deleteImageFromServer(url?: string | null): Promise<void> {
-  const fileId = parseDriveFileId(url);
+async function deleteImageFromServer(
+  driveFileId?: string | null,
+  imageUrl?: string | null
+): Promise<void> {
+  const fileId = driveFileId || parseDriveFileId(imageUrl);
   if (!fileId) return;
-  await fetch(`/api/drive/files/${fileId}`, { method: "DELETE" }).catch(() => {});
+  try {
+    await fetch(`/api/drive/files/${fileId}`, {
+      method: "DELETE",
+    });
+  } catch {}
 }
 
 function toProductData(form: ProductFormValues): ProductInput {
@@ -106,13 +120,17 @@ function toProductData(form: ProductFormValues): ProductInput {
     category: form.category,
     stock: Number(form.stock),
     image: form.image.trim(),
+    driveFileId: form.driveFileId.trim(),
   };
 }
 
 export default function DashboardProductsPage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
+  const {
+    data: products,
+    loading,
+    error: streamError,
+  } = useCollectionStream<Product>("/api/products/stream", "products");
+  const [actionError, setActionError] = useState("");
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -121,28 +139,19 @@ export default function DashboardProductsPage() {
   const [formError, setFormError] = useState("");
   const [uploading, setUploading] = useState(false);
 
-  useEffect(() => {
-    const unsubscribe = subscribeToProducts(
-      (items) => {
-        setProducts(items);
-        setLoading(false);
-        setLoadError("");
-      },
-      () => {
-        setLoadError(
-          "Could not load products. Make sure the Firestore database is created and read rules are enabled."
-        );
-        setLoading(false);
-      }
-    );
-    return unsubscribe;
-  }, []);
+  const loadError = streamError || actionError;
 
   const filteredProducts = products.filter((product) =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const deleteTarget = products.find((product) => product.id === deleteId) || null;
+
+  function getOriginalDriveFileId(): string | undefined {
+    if (!form.id) return undefined;
+    const product = products.find((item) => item.id === form.id);
+    return product?.driveFileId || parseDriveFileId(product?.image) || undefined;
+  }
 
   function openAddModal() {
     setForm(emptyForm);
@@ -159,9 +168,28 @@ export default function DashboardProductsPage() {
       category: product.category,
       stock: String(product.stock),
       image: product.image,
+      driveFileId: product.driveFileId || "",
     });
     setFormError("");
     setIsModalOpen(true);
+  }
+
+  function closeModal() {
+    const original = getOriginalDriveFileId();
+    if (form.driveFileId && form.driveFileId !== original) {
+      void deleteImageFromServer(form.driveFileId, form.image);
+    }
+    setIsModalOpen(false);
+    setForm(emptyForm);
+    setFormError("");
+  }
+
+  function removeFormImage() {
+    const original = getOriginalDriveFileId();
+    if (form.driveFileId && form.driveFileId !== original) {
+      void deleteImageFromServer(form.driveFileId, form.image);
+    }
+    setForm({ ...form, image: "", driveFileId: "" });
   }
 
   function handleImageChange(file: File | null) {
@@ -174,8 +202,8 @@ export default function DashboardProductsPage() {
     setUploading(true);
     processImageFile(file)
       .then((blob) => uploadImageToServer(blob))
-      .then((url) => {
-        setForm((prev) => ({ ...prev, image: url }));
+      .then(({ imageUrl, driveFileId }) => {
+        setForm((prev) => ({ ...prev, image: imageUrl, driveFileId }));
       })
       .catch((err: Error) => {
         setFormError(err?.message || "Could not upload the image. Please try again.");
@@ -186,39 +214,52 @@ export default function DashboardProductsPage() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setFormError("");
+    setActionError("");
     setSaving(true);
     try {
       if (form.id) {
         const existing = products.find((product) => product.id === form.id);
-        if (existing && existing.image !== form.image) {
-          deleteImageFromServer(existing.image);
+        await apiFetch<{ ok: boolean }>(`/api/products/${form.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(toProductData(form)),
+        });
+        const existingFileId =
+          existing?.driveFileId || parseDriveFileId(existing?.image);
+        const nextFileId = form.driveFileId || parseDriveFileId(form.image);
+        if (existing && existingFileId && existingFileId !== nextFileId) {
+          void deleteImageFromServer(existingFileId, existing.image);
         }
-        await updateProduct(form.id, toProductData(form));
       } else {
-        await addProduct(toProductData(form));
+        await apiFetch<{ id: string }>("/api/products", {
+          method: "POST",
+          body: JSON.stringify(toProductData(form)),
+        });
       }
       setIsModalOpen(false);
       setForm(emptyForm);
     } catch (err) {
-      setFormError("Could not save the product. Check your Firestore write rules and try again.");
+      setFormError(
+        err instanceof Error ? err.message : "Could not save the product."
+      );
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete() {
-    setFormError("");
-    const target = products.find((product) => product.id === deleteId);
+    if (!deleteId) return;
+    setActionError("");
     try {
-      if (target) {
-        await deleteImageFromServer(target.image);
-      }
-      if (deleteId) {
-        await removeProduct(deleteId);
-      }
+      const data = await apiFetch<{ product: Product }>(
+        `/api/products/${deleteId}`,
+        { method: "DELETE" }
+      );
+      void deleteImageFromServer(data.product.driveFileId, data.product.image);
       setDeleteId(null);
     } catch (err) {
-      setLoadError("Could not delete the product. Check your Firestore write rules and try again.");
+      setActionError(
+        err instanceof Error ? err.message : "Could not delete the product."
+      );
       setDeleteId(null);
     }
   }
@@ -462,7 +503,7 @@ export default function DashboardProductsPage() {
 
       {isModalOpen && (
         <div
-          onClick={() => setIsModalOpen(false)}
+          onClick={closeModal}
           className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
         >
           <div
@@ -474,7 +515,7 @@ export default function DashboardProductsPage() {
                 {form.id ? "Edit Product" : "Add Product"}
               </h2>
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={closeModal}
                 className="p-1.5 sk-btn rounded-lg"
               >
                 <X className="w-5 h-5" />
@@ -581,7 +622,7 @@ export default function DashboardProductsPage() {
                         />
                         <button
                           type="button"
-                          onClick={() => setForm({ ...form, image: "" })}
+                          onClick={removeFormImage}
                           className="absolute -top-2 -right-2 p-1 bg-white dark:bg-slate-800 border border-border-light dark:border-border-dark rounded-full shadow-md hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                           title="Remove image"
                         >
@@ -652,7 +693,7 @@ export default function DashboardProductsPage() {
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={closeModal}
                   className="px-4 py-2.5 text-sm font-medium sk-btn"
                 >
                   Cancel
