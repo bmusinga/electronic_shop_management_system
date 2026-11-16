@@ -67,4 +67,18 @@ export interface SaleInput {
   total: number;
 }
 
+export type CategoryCardTile = {
+  label: string;
+  category: string;
+  image: string;
+  emoji: string;
+};
+
+export type CategoryCardGroup = {
+  title: string;
+  link: string;
+  color: string;
+  tiles: CategoryCardTile[];
+};
+
 export type SettingsData = Record<string, string>;

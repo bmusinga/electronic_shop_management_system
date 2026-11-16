@@ -13,6 +13,7 @@ const ALLOWED_KEYS = [
   "description",
   "contactEmail",
   "contactPhone",
+  "categoryCards",
 ] as const;
 
 interface SettingsBody {
@@ -24,6 +25,12 @@ function parseSettings(body: SettingsBody): SettingsData {
 
   for (const key of ALLOWED_KEYS) {
     const value = body[key];
+    if (key === "categoryCards") {
+      if (typeof value === "string") {
+        data[key] = value.slice(0, 200000);
+      }
+      continue;
+    }
     if (typeof value === "string") {
       data[key] = value.trim().slice(0, 2000);
     }

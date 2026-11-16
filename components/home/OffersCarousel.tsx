@@ -103,9 +103,6 @@ export default function OffersCarousel() {
           ))}
         </div>
       </div>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-3 text-sm text-[#5b6b78] dark:text-[#9fb0be]">
-        {cards.length} featured offer{cards.length === 1 ? "" : "s"}
-      </div>
       <style jsx>{`
         @keyframes eshop-marquee {
           0% { transform: translateX(0); }

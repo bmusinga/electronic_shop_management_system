@@ -1,4 +1,5 @@
 import OffersCarousel from "@/components/home/OffersCarousel";
+import CrazyOffersSection from "@/components/home/CrazyOffersSection";
 import CategoryTiles from "@/components/home/CategoryTiles";
 import RepairsSection from "@/components/home/RepairsSection";
 import FeaturedProducts from "@/components/home/FeaturedProducts";
@@ -7,6 +8,7 @@ export default function Home() {
   return (
     <main className="bg-[#eef1f4] dark:bg-[#0b1218]">
       <OffersCarousel />
+      <CrazyOffersSection />
       <CategoryTiles />
       <RepairsSection />
       <section className="py-6">
