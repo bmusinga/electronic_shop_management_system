@@ -1,140 +1,92 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { Search, ShoppingCart, Filter } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import ProductImage from "@/components/ui/ProductImage";
 import { apiFetch } from "@/lib/client-api";
 import { getStockStatus, getStockBadgeClass } from "@/lib/stock";
 import type { Product } from "@/lib/types";
 
-const categories = ["All", "Smartphones", "Laptops", "Audio", "Accessories", "Wearables"];
+const categories = ["All", "Phones", "Smartphones", "Laptops", "TV & Audio", "Audio", "Accessories", "Gaming", "Smart Home"];
 
-export default function ProductsPage() {
+function ProductsContent() {
+  const searchParams = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState("All");
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
+  const [activeCategory, setActiveCategory] = useState(searchParams.get("category") || "All");
 
   useEffect(() => {
     let active = true;
-
     apiFetch<Product[]>("/api/products", { cache: "no-store" })
-      .then((items) => {
-        if (active) {
-          setProducts(items);
-          setLoading(false);
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
+      .then((items) => { if (active) { setProducts(items); setLoading(false); } })
+      .catch(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, []);
 
+  useEffect(() => {
+    const q = searchParams.get("q");
+    const c = searchParams.get("category");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (q !== null) setSearchQuery(q);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (c !== null) setActiveCategory(c);
+  }, [searchParams]);
+
   const filteredProducts = products.filter((product) => {
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) || (product.description || "").toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = activeCategory === "All" || product.category === activeCategory;
     return matchesSearch && matchesCategory;
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-6 [text-shadow:0_1px_0_rgba(255,255,255,0.7)] dark:[text-shadow:0_2px_4px_rgba(0,0,0,0.45)]">
-          Our Products
-        </h1>
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search products..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 sk-input text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:ring-[#2563EB]"
-            />
+    <main className="min-h-screen bg-[#eef1f4] dark:bg-[#0b1218]">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="bg-white dark:bg-[#15202a] border border-[#d5dce2] dark:border-[#2a3a47] rounded-[10px] p-4 sm:p-5 mb-4">
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#14202a] dark:text-[#eaf0f5] mb-4">Electronics & Accessories</h1>
+          <div className="flex flex-col md:flex-row gap-3 mb-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5b6b78]" />
+              <input type="text" placeholder="Search phones, laptops, TVs, accessories" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-9 pr-4 py-2.5 border border-[#d5dce2] dark:border-[#2a3a47] rounded-lg bg-white dark:bg-[#0b1218] text-[#14202a] dark:text-[#eaf0f5] placeholder:text-[#5b6b78]" />
+            </div>
           </div>
-        </div>
-
-        <div className="flex flex-wrap gap-2 mb-8">
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => setActiveCategory(category)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 border ${
-                activeCategory === category
-                  ? "bg-gradient-to-b from-[#e6edf7] to-[#cbd9ea] dark:from-[#1b2638] dark:to-[#0e1622] text-[#2563EB] dark:text-white border-border-light dark:border-border-dark shadow-[inset_0_2px_4px_rgba(15,23,42,0.15),inset_0_-1px_0_rgba(255,255,255,0.5)]"
-                  : "border-border-light dark:border-border-dark bg-gradient-to-b from-white to-[#e9eef4] dark:from-[#2a3a50] dark:to-[#16202f] text-slate-700 dark:text-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(15,23,42,0.14)] hover:from-white hover:to-[#dee6ee] dark:hover:from-[#31425c] dark:hover:to-[#1a2535] active:translate-y-px"
-              }`}
-            >
-              {category}
-            </button>
-          ))}
+          <div className="flex flex-wrap gap-2">
+            {categories.map((category) => (
+              <button key={category} onClick={() => setActiveCategory(category)} className={`px-3 py-1.5 rounded-full text-sm font-medium border ${activeCategory === category ? "bg-[#173f52] text-white border-[#173f52]" : "bg-[#eef1f4] dark:bg-[#0b1218] text-[#14202a] dark:text-[#eaf0f5] border-[#d5dce2] dark:border-[#2a3a47] hover:border-[#ff7a1a]"}`}>
+                {category}
+              </button>
+            ))}
+          </div>
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="w-10 h-10 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
-          </div>
+          <div className="flex items-center justify-center py-20"><div className="w-10 h-10 border-4 border-[#ff7a1a] border-t-transparent rounded-full animate-spin" /></div>
         ) : filteredProducts.length === 0 ? (
-          <div className="text-center py-20">
-            <Filter className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
-              No products found
-            </h3>
-            <p className="text-slate-500 dark:text-slate-400">
-              Products you add in the dashboard will appear here.
-            </p>
+          <div className="text-center py-20 bg-white dark:bg-[#15202a] border border-[#d5dce2] dark:border-[#2a3a47] rounded-[10px]">
+            <Filter className="w-10 h-10 text-[#5b6b78] mx-auto mb-3" />
+            <h3 className="text-lg font-semibold text-[#14202a] dark:text-[#eaf0f5] mb-1">No products found</h3>
+            <p className="text-sm text-[#5b6b78] dark:text-[#9fb0be]">Try a different search or category.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredProducts.map((product) => {
               const status = getStockStatus(product.stock);
               return (
-                <div
-                  key={product.id}
-                  className="sk-panel transition-all duration-300 hover:-translate-y-1 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-1px_0_rgba(15,23,42,0.06),0_10px_20px_rgba(15,23,42,0.2)] group overflow-hidden"
-                >
-                  <div className="m-3 mb-0 sk-panel-inset relative overflow-hidden">
-                    <ProductImage
-                      src={product.image}
-                      alt={product.name}
-                      width={400}
-                      height={300}
-                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
+                <div key={product.id} className="bg-white dark:bg-[#15202a] border border-[#d5dce2] dark:border-[#2a3a47] rounded-[10px] overflow-hidden hover:shadow-md transition-shadow">
+                  <div className="relative h-44 bg-[#f9fafb] dark:bg-[#0b1218]">
+                    <ProductImage src={product.image} alt={product.name} fill sizes="(max-width: 640px) 100vw, 25vw" className="object-contain p-3" />
                   </div>
-                  <div className="p-5">
+                  <div className="p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-medium px-2.5 py-1 rounded-full sk-badge bg-[#2563EB]/10 text-[#2563EB]">
-                        {product.category}
-                      </span>
-                      <span
-                        className={`text-xs font-medium px-2.5 py-1 rounded-full sk-badge ${getStockBadgeClass(
-                          status
-                        )}`}
-                      >
-                        {status}
-                      </span>
+                      <span className="text-xs font-medium px-2 py-0.5 rounded bg-[#eef1f4] dark:bg-[#0b1218] text-[#173f52] dark:text-[#9fb0be]">{product.category}</span>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getStockBadgeClass(status)}`}>{status}</span>
                     </div>
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">
-                      {product.name}
-                    </h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-3 line-clamp-2">
-                      {product.description}
-                    </p>
+                    <h3 className="text-base font-semibold text-[#14202a] dark:text-[#eaf0f5] mb-1 line-clamp-2">{product.name}</h3>
+                    <p className="text-sm text-[#5b6b78] dark:text-[#9fb0be] mb-3 line-clamp-2">{product.description}</p>
                     <div className="flex items-center justify-between">
-                      <span className="text-xl font-bold text-slate-900 dark:text-white">
-                        ${product.price.toLocaleString()}
-                      </span>
-                      <button className="p-2.5 rounded-lg sk-btn-primary">
-                        <ShoppingCart className="w-4 h-4" />
-                      </button>
+                      <span className="text-lg font-bold text-[#14202a] dark:text-[#eaf0f5]">KES {product.price.toLocaleString("en-KE")}</span>
+                      <button className="p-2 rounded-lg bg-[#ff7a1a] text-white hover:bg-[#e66e15]" aria-label={`View ${product.name}`}><ShoppingCart className="w-4 h-4" /></button>
                     </div>
                   </div>
                 </div>
@@ -143,6 +95,14 @@ export default function ProductsPage() {
           </div>
         )}
       </section>
-    </div>
+    </main>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen bg-[#eef1f4] dark:bg-[#0b1218]"><div className="max-w-7xl mx-auto px-4 py-20 text-center text-[#5b6b78]">Loading products...</div></main>}>
+      <ProductsContent />
+    </Suspense>
   );
 }

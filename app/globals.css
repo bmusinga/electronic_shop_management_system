@@ -3,98 +3,99 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
-  --color-primary: #2563EB;
-  --color-primary-hover: #1D4ED8;
-  --color-primary-light: #DBEAFE;
+  --color-header: #0f2e3d;
+  --color-nav: #173f52;
+  --color-accent: #ff7a1a;
+  --color-accent-hover: #e66e15;
+  --color-page: #eef1f4;
+  --color-card: #ffffff;
+  --color-ink: #14202a;
+  --color-muted: #5b6b78;
+  --color-line: #d5dce2;
 
-  --color-surface-light: #FFFFFF;
-  --color-surface-dark: #0F172A;
-
-  --color-bg-light: #F8FAFC;
-  --color-bg-dark: #020617;
-
-  --color-card-light: #FFFFFF;
-  --color-card-dark: #1E293B;
-
-  --color-border-light: #E2E8F0;
-  --color-border-dark: #334155;
-
-  --color-text-primary-light: #0F172A;
-  --color-text-primary-dark: #F1F5F9;
-
-  --color-text-secondary-light: #475569;
-  --color-text-secondary-dark: #94A3B8;
-
-  --color-text-muted-light: #94A3B8;
-  --color-text-muted-dark: #64748B;
-
+  /* keep legacy token names for dashboard/components compatibility */
+  --color-primary: #ff7a1a;
+  --color-primary-hover: #e66e15;
+  --color-primary-light: #fff1e6;
+  --color-surface-light: #ffffff;
+  --color-surface-dark: #15202a;
+  --color-bg-light: #eef1f4;
+  --color-bg-dark: #0b1218;
+  --color-card-light: #ffffff;
+  --color-card-dark: #15202a;
+  --color-border-light: #d5dce2;
+  --color-border-dark: #2a3a47;
+  --color-text-primary-light: #14202a;
+  --color-text-primary-dark: #eaf0f5;
+  --color-text-secondary-light: #5b6b78;
+  --color-text-secondary-dark: #9fb0be;
+  --color-text-muted-light: #5b6b78;
+  --color-text-muted-dark: #9fb0be;
   --color-success: #16A34A;
   --color-warning: #F59E0B;
   --color-danger: #DC2626;
 
-  /* Maroon palette */
-  --color-maroon: #800000;
-  --color-maroon-light: #A03A30;
-  --color-maroon-dark: #591010;
-  --color-maroon-deep: #3B0A0A;
-  --color-maroon-cream: #F3E3D8;
-  --color-maroon-cream-dim: #D9BCAA;
-
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-html {
-  scroll-behavior: smooth;
+:root {
+  --header: #0f2e3d;
+  --nav: #173f52;
+  --accent: #ff7a1a;
+  --page-bg: #eef1f4;
+  --card-bg: #ffffff;
+  --text: #14202a;
+  --muted-text: #5b6b78;
+  --border: #d5dce2;
+  color-scheme: light;
 }
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page-bg: #0b1218;
+    --card-bg: #15202a;
+    --text: #eaf0f5;
+    --muted-text: #9fb0be;
+    --border: #2a3a47;
+    color-scheme: dark;
+  }
+}
+
+.dark {
+  --page-bg: #0b1218;
+  --card-bg: #15202a;
+  --text: #eaf0f5;
+  --muted-text: #9fb0be;
+  --border: #2a3a47;
+  color-scheme: dark;
+}
+
+html { scroll-behavior: smooth; }
 
 body {
-  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
-  background-color: var(--color-bg-light);
-  color: var(--color-text-primary-light);
-  background-image: radial-gradient(
-    circle at 50% 0%,
-    rgba(37, 99, 235, 0.045),
-    transparent 55%
-  );
+  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--page-bg);
+  color: var(--text);
 }
 
-.dark body,
-body.dark {
-  background-color: var(--color-bg-dark);
-  color: var(--color-text-primary-dark);
-  background-image: radial-gradient(
-    circle at 50% 0%,
-    rgba(37, 99, 235, 0.08),
-    transparent 55%
-  );
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-}
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #b7c2cc; border-radius: 4px; }
+.dark ::-webkit-scrollbar-thumb { background: #425466; }
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
-  border-radius: 4px;
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background: #475569;
-}
-
-/* Smooth transitions for theme switching */
 * {
-  transition:
-    background-color 0.2s ease,
-    color 0.2s ease,
-    border-color 0.2s ease;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
 /* ------------------------------------------------------------------ */
 /*  Skeuomorphic design system                                          */

@@ -2,74 +2,16 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowRight, Star, ShoppingCart } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import ProductImage from "@/components/ui/ProductImage";
 import { apiFetch } from "@/lib/client-api";
 import { getStockStatus, type StockStatus } from "@/lib/stock";
 import type { Product } from "@/lib/types";
 
-function getStockBadgeColor(status: StockStatus): string {
-  switch (status) {
-    case "In Stock":
-      return "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300";
-    case "Low Stock":
-      return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300";
-    case "Out of Stock":
-      return "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300";
-    default:
-      return "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300";
-  }
-}
-
-function ProductCard({ product }: { product: Product }) {
-  const stock = getStockStatus(product.stock);
-  return (
-    <div className="group sk-panel overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-1px_0_rgba(15,23,42,0.06),0_10px_20px_rgba(15,23,42,0.2)]">
-      <div className="m-3 mb-0 sk-panel-inset relative w-auto h-44 bg-slate-100 dark:bg-slate-700 overflow-hidden">
-        <ProductImage
-          src={product.image}
-          alt={product.name}
-          fill
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-          className="object-cover transition-transform duration-300 group-hover:scale-105"
-        />
-        <span
-          className={`absolute top-2.5 left-2.5 text-xs font-semibold px-2.5 py-1 rounded-full sk-badge ${getStockBadgeColor(stock)}`}
-        >
-          {stock}
-        </span>
-      </div>
-
-      <div className="p-4">
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1 [text-shadow:0_1px_0_rgba(255,255,255,0.6)] dark:[text-shadow:0_1px_0_rgba(0,0,0,0.4)]">
-          {product.name}
-        </h3>
-
-        <div className="flex items-center gap-1 mb-2">
-          <Star className="w-4 h-4 fill-amber-400 text-amber-400 drop-shadow-[0_1px_1px_rgba(0,0,0,0.2)]" />
-          <span className="text-sm text-slate-600 dark:text-slate-400">
-            {product.rating || 4.5}
-          </span>
-        </div>
-
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-3 line-clamp-2">
-          {product.description}
-        </p>
-
-        <div className="flex items-center justify-between">
-          <span className="text-xl font-bold text-slate-900 dark:text-white [text-shadow:0_1px_0_rgba(255,255,255,0.6)] dark:[text-shadow:none]">
-            ${product.price.toLocaleString()}
-          </span>
-          <button
-            aria-label={`Add ${product.name} to cart`}
-            className="p-2 rounded-lg sk-btn-primary"
-          >
-            <ShoppingCart className="w-5 h-5 drop-shadow-[0_1px_0_rgba(0,0,0,0.25)]" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+function badge(status: StockStatus) {
+  if (status === "In Stock") return "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300";
+  if (status === "Low Stock") return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300";
+  return "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300";
 }
 
 export default function FeaturedProducts() {
@@ -78,55 +20,38 @@ export default function FeaturedProducts() {
 
   useEffect(() => {
     let active = true;
-
     apiFetch<Product[]>("/api/products", { cache: "no-store" })
-      .then((items) => {
-        if (active) {
-          setProducts(items.slice(0, 6));
-          setLoaded(true);
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setLoaded(true);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
+      .then((items) => { if (active) { setProducts(items.slice(0, 8)); setLoaded(true); } })
+      .catch(() => { if (active) setLoaded(true); });
+    return () => { active = false; };
   }, []);
 
   return (
-    <section className="py-16 bg-slate-50 dark:bg-transparent">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-3 [text-shadow:0_1px_0_rgba(255,255,255,0.7)] dark:[text-shadow:0_2px_4px_rgba(0,0,0,0.45)]">
-            Featured Products
-          </h2>
-          <p className="text-lg text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
-            Handpicked electronics chosen for their exceptional quality,
-            performance, and value.
-          </p>
+    <section className="py-4">
+      <div className="bg-white dark:bg-[#15202a] border border-[#d5dce2] dark:border-[#2a3a47] rounded-[10px] p-4 sm:p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-[#14202a] dark:text-[#eaf0f5]">Popular picks</h2>
+          <Link href="/products" className="text-sm font-medium text-[#173f52] dark:text-[#9fb0be] hover:text-[#ff7a1a] inline-flex items-center gap-1">View all <ArrowRight className="w-4 h-4" /></Link>
         </div>
-
-        {loaded && products.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+        {loaded && products.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {products.map((product) => {
+              const stock = getStockStatus(product.stock);
+              return (
+                <div key={product.id} className="border border-[#d5dce2] dark:border-[#2a3a47] rounded-lg p-3 bg-white dark:bg-[#0b1218]">
+                  <div className="relative h-32 bg-[#eef1f4] dark:bg-[#15202a] rounded mb-2 overflow-hidden">
+                    <ProductImage src={product.image} alt={product.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="object-contain p-2" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-[#14202a] dark:text-[#eaf0f5] line-clamp-2 min-h-[2.5rem]">{product.name}</h3>
+                  <p className="text-base font-bold text-[#14202a] dark:text-[#eaf0f5] mt-1">KES {product.price.toLocaleString("en-KE")}</p>
+                  <span className={`inline-block mt-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${badge(stock)}`}>{stock}</span>
+                </div>
+              );
+            })}
           </div>
+        ) : (
+          <p className="text-sm text-[#5b6b78] dark:text-[#9fb0be]">Browse our latest phones, laptops, TVs and accessories at great prices in Juja Farm.</p>
         )}
-
-        <div className="text-center">
-          <Link
-            href="/products"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold sk-btn-primary"
-          >
-            View All Products
-            <ArrowRight className="w-5 h-5" />
-          </Link>
-        </div>
       </div>
     </section>
   );

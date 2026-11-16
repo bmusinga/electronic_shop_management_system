@@ -12,7 +12,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   return (
     <>
       {!isDashboard && <Navbar />}
-      <main className="flex-1">{children}</main>
+      <div className="flex-1">{children}</div>
       {!isDashboard && <Footer />}
     </>
   );

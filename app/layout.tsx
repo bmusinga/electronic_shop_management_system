@@ -1,34 +1,19 @@
-import { Geist, Geist_Mono } from "next/font/google";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 import Providers from "./providers";
 import AppShell from "@/components/layout/AppShell";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "Voltex Electronics - Premium Electronics Store",
+  title: "EShop - Electronics & Phone Repairs in Juja Farm",
   description:
-    "Discover the latest in electronics at Voltex. Shop smartphones, laptops, audio gear, and more with competitive prices and expert support.",
+    "Shop electronics and get fast mobile phone repairs in Juja Farm, Kenya. Phones, laptops, TVs, accessories and trusted repair services.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-      suppressHydrationWarning
-    >
-      <body className="min-h-full flex flex-col bg-bg-light dark:bg-bg-dark text-text-primary-light dark:text-text-primary-dark">
+    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
+      <body className="min-h-full flex flex-col bg-[#eef1f4] text-[#14202a] dark:bg-[#0b1218] dark:text-[#eaf0f5]">
         <Providers>
           <AppShell>{children}</AppShell>
         </Providers>

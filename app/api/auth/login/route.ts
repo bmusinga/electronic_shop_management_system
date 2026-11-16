@@ -52,7 +52,8 @@ export async function POST(request: Request) {
       throw new AuthError(400, "Password is required.");
     }
 
-    const apiKey = process.env.FIREBASE_API_KEY;
+    const apiKey =
+      process.env.FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
     if (!apiKey) {
       throw new AuthError(
         500,

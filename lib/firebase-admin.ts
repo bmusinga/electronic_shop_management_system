@@ -22,33 +22,29 @@ function readServiceAccount() {
 
   let parsed: ServiceAccountJson;
   try {
-    parsed = JSON.parse(
-      Buffer.from(encoded, "base64").toString("utf8")
-    ) as ServiceAccountJson;
+    parsed = JSON.parse(Buffer.from(encoded, "base64").toString("utf8")) as ServiceAccountJson;
   } catch {
-    throw new Error(
-      "FIREBASE_SERVICE_ACCOUNT_BASE64 is not valid base64-encoded JSON."
-    );
+    try {
+      parsed = JSON.parse(encoded) as ServiceAccountJson;
+    } catch {
+      throw new Error("FIREBASE_SERVICE_ACCOUNT_BASE64 is not valid base64-encoded JSON.");
+    }
   }
 
-  if (!parsed.project_id || !parsed.client_email || !parsed.private_key) {
-    throw new Error(
-      "The Firebase service account is missing project_id, client_email, or private_key."
-    );
+  const projectId = parsed.project_id || process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  if (!projectId || !parsed.client_email || !parsed.private_key) {
+    throw new Error("The Firebase service account is missing project_id, client_email, or private_key.");
   }
 
   return {
-    projectId: parsed.project_id,
+    projectId,
     clientEmail: parsed.client_email,
     privateKey: parsed.private_key.replace(/\\n/g, "\n"),
   };
 }
 
 export function getAdminApp(): App {
-  if (app) {
-    return app;
-  }
-
+  if (app) return app;
   const existing = getApps()[0];
   if (existing) {
     app = existing;

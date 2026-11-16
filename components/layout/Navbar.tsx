@@ -1,104 +1,98 @@
 "use client";
 
-import { useState } from "react";
+import { FormEvent, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { Moon, Phone, Search, Sun } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
-import {
-  Sun,
-  Moon,
-  Menu,
-  X,
-  Zap,
-  Phone,
-} from "lucide-react";
 
-interface NavLink {
-  href: string;
-  label: string;
-}
-
-const navLinks: NavLink[] = [
-  { href: "/", label: "Home" },
-  { href: "/about", label: "About" },
-  { href: "/products", label: "Products" },
-  { href: "/contact", label: "Contact" },
+const SHOP_PHONE = "07XX XXX XXX";
+const SHOP_PHONE_TEL = "+254700000000";
+const navLinks = [
+  { href: "/", label: "All" },
+  { href: "/products?deal=today", label: "Today's Deals" },
+  { href: "/products?category=Phones", label: "Phones" },
+  { href: "/products?category=Laptops", label: "Laptops" },
+  { href: "/products?category=TV%20%26%20Audio", label: "TV & Audio" },
+  { href: "/products?category=Gaming", label: "Gaming" },
+  { href: "/products?category=Smart%20Home", label: "Smart Home" },
+  { href: "/products?category=Accessories", label: "Accessories" },
+  { href: "/#repair", label: "Repairs" },
 ];
 
-const iconButton =
-  "w-10 h-10 rounded-lg border border-border-light dark:border-border-dark flex items-center justify-center text-text-secondary-light dark:text-text-secondary-dark bg-gradient-to-b from-white to-[#e2e8f0] dark:from-[#2a3a50] dark:to-[#16202f] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_1px_2px_rgba(15,23,42,0.18)] active:translate-y-px active:shadow-[inset_0_2px_5px_rgba(15,23,42,0.22)] transition-all duration-150";
-
 export default function Navbar() {
-  const [mobileOpen, setMobileOpen] = useState(false);
   const { dark, toggleTheme } = useTheme();
   const pathname = usePathname();
+  const router = useRouter();
+  const [query, setQuery] = useState("");
 
-  const linkClass = (isActive: boolean) =>
-    `px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
-      isActive
-        ? "bg-gradient-to-b from-[#eef4fb] to-[#d3dfee] dark:from-[#18202e] dark:to-[#0e1622] border border-border-light dark:border-border-dark text-primary dark:text-white shadow-[inset_0_2px_4px_rgba(15,23,42,0.12),inset_0_-1px_0_rgba(255,255,255,0.55)]"
-        : "border border-transparent text-text-secondary-light dark:text-text-secondary-dark hover:text-primary dark:hover:text-white hover:bg-gradient-to-b hover:from-white hover:to-[#e2e8f0] dark:hover:from-[#2a3a50] dark:hover:to-[#16202f] hover:border-border-light dark:hover:border-border-dark hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_1px_3px_rgba(15,23,42,0.16)]"
-    }`;
+  const onSearch = (e: FormEvent) => {
+    e.preventDefault();
+    const q = query.trim();
+    router.push(q ? `/products?q=${encodeURIComponent(q)}` : "/products");
+  };
 
   return (
-    <header className="sticky top-0 z-50 bg-gradient-to-b from-white to-[#eef2f7] dark:from-[#24324a] dark:to-[#131c29] border-b border-border-light dark:border-border-dark shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_2px_6px_rgba(15,23,42,0.12)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_2px_6px_rgba(0,0,0,0.5)]">
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-9 h-9 bg-gradient-to-b from-[#4f8cff] to-[#1f53c7] border border-[#143a8f] rounded-lg flex items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.5),inset_0_-1px_0_rgba(0,0,0,0.35),0_2px_4px_rgba(15,23,42,0.25)] transition-colors">
-              <Zap className="w-5 h-5 text-white drop-shadow-[0_1px_0_rgba(0,0,0,0.4)]" />
-            </div>
-            <span className="text-xl font-bold tracking-tight text-text-primary-light dark:text-text-primary-dark [text-shadow:0_1px_0_rgba(255,255,255,0.6)]">
-              Voltex
-            </span>
-          </Link>
+    <header className="sticky top-0 z-50 text-white">
+      <div className="bg-[#0f2e3d]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-wrap items-center gap-3 py-2.5 min-[600px]:flex-nowrap">
+            <Link href="/" className="shrink-0 leading-tight">
+              <div className="text-[24px] font-bold tracking-tight">
+                E<span className="text-[#ff7a1a]">Shop</span>
+              </div>
+              <div className="text-[11px] text-white/85 -mt-0.5">📍 Juja Farm</div>
+            </Link>
 
-          <div className="hidden md:flex items-center gap-1">
-            {navLinks.map((link) => (
-              <Link key={link.href} href={link.href} className={linkClass(pathname === link.href)}>
-                {link.label}
-              </Link>
-            ))}
-          </div>
+            <form onSubmit={onSearch} className="order-3 w-full min-[600px]:order-2 min-[600px]:flex-1 min-[600px]:flex min-[600px]:justify-center">
+              <div className="flex w-full min-[600px]:max-w-[520px]">
+                <label htmlFor="site-search" className="sr-only">Search products</label>
+                <input
+                  id="site-search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search phones, laptops, TVs, accessories"
+                  className="w-full h-10 rounded-l-lg rounded-r-none border border-r-0 border-white/20 bg-white px-3 text-sm text-[#14202a] placeholder:text-[#5b6b78] focus:outline-none focus:ring-2 focus:ring-[#ff7a1a]"
+                />
+                <button type="submit" className="h-10 rounded-r-lg rounded-l-none bg-[#ff7a1a] px-4 text-sm font-semibold text-white hover:bg-[#e66e15] flex items-center gap-2 shrink-0" aria-label="Search">
+                  <Search className="w-4 h-4" />
+                  <span className="hidden sm:inline">Search</span>
+                </button>
+              </div>
+            </form>
 
-          <div className="flex items-center gap-2">
-            <button onClick={toggleTheme} className={iconButton} aria-label="Toggle theme">
-              {dark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
-
-            <div className="hidden sm:flex items-center gap-2 ml-2 border border-border-light dark:border-border-dark rounded-lg bg-gradient-to-b from-white to-[#e2e8f0] dark:from-[#2a3a50] dark:to-[#16202f] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_1px_2px_rgba(15,23,42,0.18)]">
-              <a href="tel:+254712345678" className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark hover:text-primary dark:hover:text-white transition-colors">
-                <Phone className="w-4 h-4" />
-                +254 712 345 678
+            <div className="order-2 ml-auto flex items-center gap-2 min-[600px]:order-3 min-[600px]:ml-0 shrink-0">
+              <a href={`tel:${SHOP_PHONE_TEL}`} className="hidden min-[600px]:block text-right leading-tight hover:text-[#ff7a1a]">
+                <div className="text-[10px] uppercase tracking-wide text-white/75">Call or WhatsApp</div>
+                <div className="text-sm font-bold flex items-center justify-end gap-1"><Phone className="w-3.5 h-3.5" /> {SHOP_PHONE}</div>
               </a>
+              <a href={`tel:${SHOP_PHONE_TEL}`} className="min-[600px]:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20" aria-label={`Call ${SHOP_PHONE}`}>
+                <Phone className="w-5 h-5" />
+              </a>
+              <button onClick={toggleTheme} className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20" aria-label="Toggle theme">
+                {dark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </button>
             </div>
-
-            <button
-              onClick={() => setMobileOpen(!mobileOpen)}
-              className={`md:hidden ${iconButton}`}
-              aria-label="Toggle menu"
-            >
-              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
           </div>
         </div>
-
-        {mobileOpen && (
-          <div className="md:hidden pb-4">
-            <div className="sk-panel p-3 flex flex-col gap-1 mt-2">
-              {navLinks.map((link) => (
+      </div>
+      <nav className="bg-[#173f52] border-t border-white/10" aria-label="Primary">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex gap-1 overflow-x-auto no-scrollbar py-2 text-sm">
+            {navLinks.map((link) => {
+              const active = pathname === link.href || (link.href === "/" && pathname === "/");
+              return (
                 <Link
-                  key={link.href}
+                  key={link.label}
                   href={link.href}
-                  onClick={() => setMobileOpen(false)}
-                  className={linkClass(pathname === link.href)}
+                  className={`whitespace-nowrap px-3 py-1.5 rounded-md transition-colors ${active ? "bg-white/15 text-white" : "text-white/90 hover:bg-white/10 hover:text-white"}`}
                 >
                   {link.label}
                 </Link>
-              ))}
-            </div>
+              );
+            })}
           </div>
-        )}
+        </div>
       </nav>
     </header>
   );

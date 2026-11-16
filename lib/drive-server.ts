@@ -1,6 +1,6 @@
 import "server-only";
 
-const CLIENT_ID = process.env.GOOGLE_DRIVE_CLIENT_ID;
+const CLIENT_ID = process.env.GOOGLE_DRIVE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_DRIVE_CLIENT_SECRET;
 const REFRESH_TOKEN = process.env.GOOGLE_DRIVE_REFRESH_TOKEN;
 const PRODUCTS_FOLDER_ID = process.env.GOOGLE_DRIVE_PRODUCTS_FOLDER_ID;
