@@ -61,7 +61,15 @@ const DARK_COLORS: Record<string, string> = {
 };
 
 function darken(color: string) {
-  return DARK_COLORS[color.toLowerCase()] || "#24323f";
+  const key = color.toLowerCase();
+  if (DARK_COLORS[key]) return DARK_COLORS[key];
+  const m = /^#?([0-9a-f]{6})$/i.exec(color);
+  if (!m) return "#24323f";
+  const n = parseInt(m[1], 16);
+  const r = Math.max(0, Math.floor(((n >> 16) & 255) * 0.35));
+  const g = Math.max(0, Math.floor(((n >> 8) & 255) * 0.35));
+  const b = Math.max(0, Math.floor((n & 255) * 0.35));
+  return `#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
 }
 
 async function resizeDataUrl(file: File): Promise<string> {
@@ -195,7 +203,6 @@ export default function CategoryTiles() {
                 return (
                   <Link key={t.label} href={href} className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff7a1a] rounded-lg">
                     <div className="relative w-full overflow-hidden rounded-lg flex items-center justify-center" style={{ aspectRatio: "1 / 1", backgroundColor: card.color }}>
-                      <div className="absolute inset-0 hidden dark:block rounded-lg" style={{ backgroundColor: darken(card.color) }} />
                       <div className="relative z-[1] w-full h-full flex items-center justify-center" style={{ padding: "8%" }}>
                         {match.image ? (
                           <img src={match.image} alt={match.productName || t.label} className="max-w-full max-h-full object-contain transition-transform duration-150 group-hover:scale-[1.04]" />

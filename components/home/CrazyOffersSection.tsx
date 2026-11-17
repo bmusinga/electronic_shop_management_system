@@ -189,8 +189,8 @@ export default function CrazyOffersSection() {
   return (
     <section className="bg-[#eef1f4] dark:bg-[#0b1218]">
       <div
-        className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen max-w-[100vw] bg-[#0f2e3d] dark:bg-[#0b2230] text-white my-[14px]"
-        style={{ padding: "14px 16px 16px" }}
+        className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen max-w-[100vw] bg-[#14532d] dark:bg-[#14532d] text-white my-0"
+        style={{ padding: "8px 16px 16px" }}
       >
         <div className="flex items-center justify-between gap-3" style={{ marginBottom: 10 }}>
           <h2 className="text-[24px] font-bold leading-tight flex items-center gap-2 m-0">

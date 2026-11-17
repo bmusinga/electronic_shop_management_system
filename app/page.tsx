@@ -1,21 +1,21 @@
 import OffersCarousel from "@/components/home/OffersCarousel";
 import CrazyOffersSection from "@/components/home/CrazyOffersSection";
 import CategoryTiles from "@/components/home/CategoryTiles";
-import RepairsSection from "@/components/home/RepairsSection";
-import FeaturedProducts from "@/components/home/FeaturedProducts";
+import { listProducts } from "@/lib/firestore-admin";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  let products: Awaited<ReturnType<typeof listProducts>> = [];
+  try {
+    products = await listProducts();
+  } catch {}
+
   return (
     <main className="bg-[#eef1f4] dark:bg-[#0b1218]">
-      <OffersCarousel />
+      <OffersCarousel initialProducts={products} />
       <CrazyOffersSection />
       <CategoryTiles />
-      <RepairsSection />
-      <section className="py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <FeaturedProducts />
-        </div>
-      </section>
     </main>
   );
 }

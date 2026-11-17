@@ -437,7 +437,6 @@ export default function DashboardProductsPage() {
           </div>
         ) : (
           filteredProducts.map((product) => {
-            const status = getStockStatus(product.stock);
             return (
               <div key={product.id} className="sk-panel rounded-xl p-4">
                 <div className="flex gap-4">
@@ -453,13 +452,6 @@ export default function DashboardProductsPage() {
                       <h3 className="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark leading-snug">
                         {product.name}
                       </h3>
-                      <span
-                        className={`inline-block text-[11px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${getStockBadgeClass(
-                          status
-                        )}`}
-                      >
-                        {status}
-                      </span>
                     </div>
                     {product.description && (
                       <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-1 line-clamp-2">
@@ -467,7 +459,7 @@ export default function DashboardProductsPage() {
                       </p>
                     )}
                     <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <span className="inline-block text-xs font-medium px-2.5 py-1 rounded-full sk-badge bg-primary-light text-primary dark:bg-blue-900/40 dark:text-blue-300 whitespace-nowrap">
+                      <span className="inline-block text-xs font-medium text-primary dark:text-blue-300 whitespace-nowrap">
                         {product.category}
                       </span>
                       <span className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark">

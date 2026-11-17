@@ -19,7 +19,7 @@ interface ContactItem {
 const contactInfo: ContactItem[] = [
   { icon: MapPin, text: "123 Electronics Ave, Tech City, TC 10001" },
   { icon: Phone, text: "+1 (555) 123-4567" },
-  { icon: Mail, text: "support@voltex.com" },
+  { icon: Mail, text: "hello@eshop.co.ke" },
 ];
 
 const headingShadow =
@@ -32,11 +32,11 @@ export default function BusinessInfo() {
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
           <div>
             <h2 className={`text-3xl font-bold text-slate-900 dark:text-white ${headingShadow}`}>
-              About Voltex
+              About EShop
             </h2>
 
             <p className="mt-4 leading-relaxed text-slate-600 dark:text-slate-300">
-              Voltex has been a leading electronics retailer since 2015,
+              EShop has been a leading electronics retailer since 2015,
               providing customers with the latest and most reliable technology
               products on the market. We are committed to offering competitive
               prices, expert guidance, and a seamless shopping experience whether

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import { Zap, Eye, EyeOff, ArrowLeft, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -55,11 +55,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 px-4">
       <div className="sk-panel p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-b from-[#4f8cff] to-[#1f53c7] border border-[#143a8f] rounded-lg mb-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.5),inset_0_-1px_0_rgba(0,0,0,0.35),0_3px_6px_rgba(15,23,42,0.3)]">
-            <Zap className="w-6 h-6 text-white drop-shadow-[0_1px_0_rgba(0,0,0,0.4)]" />
-          </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white [text-shadow:0_1px_0_rgba(255,255,255,0.7)] dark:[text-shadow:none]">
-            Voltex
+            EShop
           </h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1">
             Sign in to Dashboard
@@ -81,7 +78,7 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               className="w-full sk-input px-4 py-3 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500"
-              placeholder="admin@voltex.com"
+              placeholder="Enter your email"
             />
           </div>
 
@@ -133,10 +130,6 @@ export default function LoginPage() {
             {signingIn ? "Signing in..." : "Sign In"}
           </button>
         </form>
-
-        <p className="text-xs text-slate-500 dark:text-slate-400 text-center mt-6">
-          Access is restricted to authorized administrators only.
-        </p>
 
         <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
           <Link

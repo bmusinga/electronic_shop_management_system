@@ -77,7 +77,7 @@ export default function Sidebar({
               <Zap className="w-4 h-4 text-white drop-shadow-[0_1px_0_rgba(0,0,0,0.4)]" />
             </div>
             <span className="text-lg font-bold tracking-tight text-text-primary-light dark:text-text-primary-dark [text-shadow:0_1px_0_rgba(255,255,255,0.6)]">
-              Voltex
+              EShop
             </span>
           </Link>
         )}
