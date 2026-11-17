@@ -95,13 +95,6 @@ export default function DashboardPage() {
     "/api/products/stream",
     "products"
   );
-  const today = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-
   const stats: Record<StatKey, number> = {
     total: products.length,
     inStock: products.filter((p) => getStockStatus(p.stock) === "In Stock").length,
@@ -122,21 +115,6 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-            Overview
-          </h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Welcome back. Here&apos;s what&apos;s happening with your store.
-          </p>
-        </div>
-        <div className="text-sm text-slate-500 dark:text-slate-400 sk-panel-inset px-4 py-2 rounded-lg">
-          {today}
-        </div>
-      </div>
-
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {statCards.map((stat) => {
@@ -256,7 +234,7 @@ export default function DashboardPage() {
                         {product.category}
                       </td>
                       <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
-                        ${product.price.toLocaleString()}
+                        {product.price.toLocaleString()}
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
                         {product.stock}

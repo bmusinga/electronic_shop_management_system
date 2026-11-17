@@ -7,13 +7,12 @@ import { useTheme } from "@/hooks/useTheme";
 import {
   LayoutDashboard,
   Package,
-  MessageSquare,
   ShoppingCart,
   Settings,
   LogOut,
   Sun,
   Moon,
-  Zap,
+  Menu,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -27,7 +26,6 @@ interface SidebarLink {
 const sidebarLinks: SidebarLink[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/products", label: "Products", icon: Package },
-  { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
   { href: "/dashboard/sales", label: "Sales", icon: ShoppingCart },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
@@ -36,12 +34,14 @@ interface SidebarProps {
   collapsed: boolean;
   mobileOpen: boolean;
   onClose: () => void;
+  onToggleCollapse: () => void;
 }
 
 export default function Sidebar({
   collapsed,
   mobileOpen,
   onClose,
+  onToggleCollapse,
 }: SidebarProps) {
   const pathname = usePathname();
   const { signOut } = useAuth();
@@ -64,27 +64,34 @@ export default function Sidebar({
       } ${collapsed ? "md:w-[68px]" : "md:w-64"}`}
     >
       <div className="flex items-center gap-2 h-16 px-4 border-b border-border-light dark:border-border-dark shadow-[0_1px_0_rgba(255,255,255,0.9)] dark:shadow-[0_1px_0_rgba(255,255,255,0.06)]">
+        {mobileOpen && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="md:hidden inline-flex w-9 h-9 items-center justify-center rounded-lg border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400"
+            aria-label="Close sidebar"
+            title="Close sidebar"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
         <button
-          onClick={onClose}
-          className="md:hidden w-9 h-9 flex items-center justify-center rounded-lg sk-btn"
-          aria-label="Close sidebar"
+          type="button"
+          onClick={onToggleCollapse}
+          className={`hidden md:inline-flex w-9 h-9 items-center justify-center rounded-lg border shrink-0 transition-colors ${
+            expanded
+              ? "border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50"
+              : "border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark hover:bg-white/70 dark:hover:bg-white/10"
+          }`}
+          aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
+          title={expanded ? "Collapse sidebar" : "Expand sidebar"}
         >
-          <X className="w-5 h-5" />
+          {expanded ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
         {expanded && (
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-b from-[#4f8cff] to-[#1f53c7] border border-[#143a8f] rounded-lg flex items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.5),inset_0_-1px_0_rgba(0,0,0,0.35),0_2px_4px_rgba(15,23,42,0.25)]">
-              <Zap className="w-4 h-4 text-white drop-shadow-[0_1px_0_rgba(0,0,0,0.4)]" />
-            </div>
-            <span className="text-lg font-bold tracking-tight text-text-primary-light dark:text-text-primary-dark [text-shadow:0_1px_0_rgba(255,255,255,0.6)]">
-              EShop
-            </span>
-          </Link>
-        )}
-        {!expanded && (
-          <div className="w-8 h-8 mx-auto bg-gradient-to-b from-[#4f8cff] to-[#1f53c7] border border-[#143a8f] rounded-lg flex items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.5),inset_0_-1px_0_rgba(0,0,0,0.35),0_2px_4px_rgba(15,23,42,0.25)]">
-            <Zap className="w-4 h-4 text-white drop-shadow-[0_1px_0_rgba(0,0,0,0.4)]" />
-          </div>
+          <span className="text-lg font-bold tracking-tight text-text-primary-light dark:text-text-primary-dark [text-shadow:0_1px_0_rgba(255,255,255,0.6)]">
+            EShop
+          </span>
         )}
       </div>
 
@@ -100,6 +107,7 @@ export default function Sidebar({
             <Link
               key={link.href}
               href={link.href}
+              onClick={onClose}
               className={linkClass(isActive)}
               title={expanded ? undefined : link.label}
             >

@@ -83,10 +83,14 @@ export default function Navbar() {
             >
               {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
-            <Link href="/" className="flex flex-wrap items-end gap-x-2 leading-tight shrink-0" onClick={() => setMenuOpen(false)}>
+            <span className="flex flex-wrap items-end gap-x-2 leading-tight shrink-0 min-[600px]:hidden">
               <span className="text-[24px] font-bold tracking-tight">E<span className="text-[#ff7a1a]">Shop</span></span>
               <span className="text-sm text-white/85">Juja Farm</span>
-              <span className="ml-6 hidden text-sm text-white/85 min-[600px]:inline">We also do phone repairs</span>
+            </span>
+            <Link href="/" className="hidden flex-wrap items-end gap-x-2 leading-tight shrink-0 min-[600px]:flex">
+              <span className="text-[24px] font-bold tracking-tight">E<span className="text-[#ff7a1a]">Shop</span></span>
+              <span className="text-sm text-white/85">Juja Farm</span>
+              <span className="ml-6 text-sm text-white/85">We also do phone repairs</span>
             </Link>
           </div>
 

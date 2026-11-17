@@ -224,13 +224,11 @@ GOOGLE_DRIVE_PRODUCTS_FOLDER_ID=
    - Home
    - About
    - Products
-   - Contact
 3. Test the theme toggle
 4. Open http://localhost:3000/login and sign in with the admin account
 5. You should be redirected to `/dashboard`
-6. Check the overview, products, messages, sales, and settings pages
+6. Check the overview, products, sales, and settings pages
 7. Add a product with an image and confirm it appears on the public products page
-8. Send a contact message and confirm it appears under Dashboard > Messages
 
 Dashboard data updates live over Server-Sent Events (SSE). Public product pages fetch once.
 
@@ -312,7 +310,7 @@ electronicsshop/
 │   ├── api/
 │   │   ├── auth/          # login, logout, session, password
 │   │   ├── drive/         # upload, delete, setup, callback
-│   │   ├── messages/      # contact messages + SSE stream
+│   │   ├── messages/      # contact messages API
 │   │   ├── products/      # products + SSE stream
 │   │   ├── sales/         # sales + SSE stream
 │   │   └── settings/      # store/profile settings

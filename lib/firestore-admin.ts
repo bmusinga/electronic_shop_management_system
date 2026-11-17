@@ -162,6 +162,58 @@ export async function recordSale(
   });
 }
 
+export async function updateSale(
+  id: string,
+  saleData: SaleInput
+): Promise<void> {
+  const db = getAdminDb();
+
+  await db.runTransaction(async (transaction) => {
+    const saleRef = db.collection(SALES_COLLECTION).doc(id);
+    const saleSnap = await transaction.get(saleRef);
+    if (!saleSnap.exists) {
+      throw new Error("Could not find the selected sale.");
+    }
+
+    const previous = saleSnap.data() as Sale;
+    if (previous.productId) {
+      const previousProductRef = db
+        .collection(PRODUCTS_COLLECTION)
+        .doc(previous.productId);
+      if ((await transaction.get(previousProductRef)).exists) {
+        transaction.update(previousProductRef, {
+          stock: FieldValue.increment(previous.quantity),
+          updatedAt: now(),
+        });
+      }
+    }
+
+    const productRef = db.collection(PRODUCTS_COLLECTION).doc(saleData.productId);
+    const productSnap = await transaction.get(productRef);
+    if (!productSnap.exists) {
+      throw new Error("Could not find the selected product.");
+    }
+
+    let currentStock = (productSnap.data()?.stock as number) ?? 0;
+    if (saleData.productId === previous.productId) {
+      currentStock += previous.quantity;
+    }
+    if (saleData.quantity > currentStock) {
+      throw new Error(
+        `Not enough stock. Only ${currentStock} unit${
+          currentStock === 1 ? "" : "s"
+        } available.`
+      );
+    }
+
+    transaction.update(productRef, {
+      stock: FieldValue.increment(-saleData.quantity),
+      updatedAt: now(),
+    });
+    transaction.update(saleRef, { ...saleData, updatedAt: now() });
+  });
+}
+
 export async function deleteSale(id: string): Promise<void> {
   const db = getAdminDb();
 

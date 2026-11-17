@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { Eye, EyeOff, ArrowLeft, AlertCircle } from "lucide-react";
@@ -8,7 +8,7 @@ import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, loading, signIn } = useAuth();
+  const { loading, signIn } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,12 +16,6 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [signingIn, setSigningIn] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
-
-  useEffect(() => {
-    if (!loading && user) {
-      router.replace("/dashboard");
-    }
-  }, [loading, user, router]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

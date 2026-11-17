@@ -3,8 +3,10 @@
 import { useState } from "react";
 import {
   Plus,
+  Edit,
   Trash2,
   ShoppingCart,
+  Search,
   Inbox,
   CalendarClock,
   X,
@@ -28,10 +30,10 @@ function formatDate(value?: string): string {
 }
 
 function formatMoney(value: number): string {
-  return `$${value.toLocaleString("en-US", {
+  return value.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })}`;
+  });
 }
 
 export default function DashboardSalesPage() {
@@ -46,9 +48,11 @@ export default function DashboardSalesPage() {
     error: salesError,
   } = useCollectionStream<Sale>("/api/sales/stream", "sales");
   const [actionError, setActionError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [saving, setSaving] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [editingSaleId, setEditingSaleId] = useState<string | null>(null);
   const [formError, setFormError] = useState("");
   const [productId, setProductId] = useState("");
   const [quantity, setQuantity] = useState("1");
@@ -58,6 +62,11 @@ export default function DashboardSalesPage() {
   const loadError = productsError || salesError || actionError;
 
   const selectedProduct = products.find((p) => p.id === productId) || null;
+  const editingSale = sales.find((sale) => sale.id === editingSaleId) || null;
+  const availableStock = selectedProduct
+    ? selectedProduct.stock +
+      (editingSale?.productId === selectedProduct.id ? editingSale.quantity : 0)
+    : 0;
 
   const quantityNum = Number(quantity);
   const unitPriceNum = Number(unitPrice);
@@ -67,9 +76,19 @@ export default function DashboardSalesPage() {
       : 0;
 
   function openModal() {
+    setEditingSaleId(null);
     setProductId("");
     setQuantity("1");
     setUnitPrice("");
+    setFormError("");
+    setIsModalOpen(true);
+  }
+
+  function openEditModal(sale: Sale) {
+    setEditingSaleId(sale.id);
+    setProductId(sale.productId);
+    setQuantity(String(sale.quantity));
+    setUnitPrice(String(sale.unitPrice));
     setFormError("");
     setIsModalOpen(true);
   }
@@ -99,28 +118,36 @@ export default function DashboardSalesPage() {
       setFormError("Please enter a valid unit price.");
       return;
     }
-    if (quantityNum > selectedProduct.stock) {
+    if (quantityNum > availableStock) {
       setFormError(
-        `Only ${selectedProduct.stock} unit${selectedProduct.stock === 1 ? "" : "s"} of ${selectedProduct.name} are in stock.`
+        `Only ${availableStock} unit${availableStock === 1 ? "" : "s"} of ${selectedProduct.name} are in stock.`
       );
       return;
     }
     setSaving(true);
     setActionError("");
     try {
-      await apiFetch<{ ok: boolean }>("/api/sales", {
-        method: "POST",
-        body: JSON.stringify({
-          productId: selectedProduct.id,
-          productName: selectedProduct.name,
-          quantity: quantityNum,
-          unitPrice: unitPriceNum,
-        }),
-      });
+      await apiFetch<{ ok: boolean }>(
+        editingSaleId ? `/api/sales/${editingSaleId}` : "/api/sales",
+        {
+          method: editingSaleId ? "PUT" : "POST",
+          body: JSON.stringify({
+            productId: selectedProduct.id,
+            productName: selectedProduct.name,
+            quantity: quantityNum,
+            unitPrice: unitPriceNum,
+          }),
+        }
+      );
       setIsModalOpen(false);
+      setEditingSaleId(null);
     } catch (err) {
       setFormError(
-        err instanceof Error ? err.message : "Could not record the sale."
+        err instanceof Error
+          ? err.message
+          : editingSaleId
+            ? "Could not update the sale."
+            : "Could not record the sale."
       );
     } finally {
       setSaving(false);
@@ -145,22 +172,26 @@ export default function DashboardSalesPage() {
 
   const saleProjectsSold = sales.reduce((sum, sale) => sum + sale.quantity, 0);
   const totalRevenue = sales.reduce((sum, sale) => sum + sale.total, 0);
+  const filteredSales = sales.filter((sale) =>
+    sale.productName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-            Sales
-          </h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Record new sales. Recording a sale subtracts the quantity from the
-            product&apos;s stock.
-          </p>
+      <div className="mx-auto flex w-full max-w-2xl items-center gap-3 sm:gap-4">
+        <div className="relative min-w-0 flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted-light dark:text-text-muted-dark" />
+          <input
+            type="text"
+            placeholder="Find sale"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="sk-input h-11 w-full rounded-xl pl-10 pr-4 text-sm text-text-primary-light dark:text-text-primary-dark placeholder-text-muted-light dark:placeholder-text-muted-dark"
+          />
         </div>
         <button
           onClick={openModal}
-          className="inline-flex items-center gap-2 px-4 py-2.5 text-white text-sm font-medium rounded-xl sk-btn-primary"
+          className="inline-flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-4 text-sm font-medium text-white sk-btn-primary"
         >
           <Plus className="w-4 h-4" />
           New Sale
@@ -209,51 +240,89 @@ export default function DashboardSalesPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4">
-        {sales.map((sale) => (
-          <div key={sale.id} className="sk-panel p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full sk-icon bg-[#2563EB]/10 flex items-center justify-center flex-shrink-0">
-                  <ShoppingCart className="w-5 h-5 text-[#2563EB]" />
-                </div>
-                <div>
-                  <h3 className="text-base font-semibold text-slate-900 dark:text-white">
-                    {sale.productName}
-                  </h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Quantity {sale.quantity} at {formatMoney(sale.unitPrice)}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setDeleteId(sale.id)}
-                aria-label={`Delete sale of ${sale.productName}`}
-                className="p-2 rounded-lg text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/40 transition-all duration-150 flex-shrink-0"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="mt-4 flex items-center justify-between flex-wrap gap-2">
-              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium sk-badge bg-[#2563EB]/10 text-[#2563EB]">
-                {formatMoney(sale.total)}
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-                <CalendarClock className="w-3.5 h-3.5" />
-                {formatDate(sale.createdAt)}
-              </span>
-            </div>
+      {!loading && !loadError && sales.length > 0 && (
+        <>
+          <div className="sk-panel overflow-x-auto">
+            <table className="w-full min-w-[800px] text-left">
+              <thead>
+                <tr className="border-b border-border-light dark:border-border-dark text-xs uppercase tracking-wider text-text-muted-light dark:text-text-muted-dark">
+                  <th className="px-6 py-4 font-semibold">Product</th>
+                  <th className="px-6 py-4 font-semibold">Quantity</th>
+                  <th className="px-6 py-4 font-semibold">Unit Price</th>
+                  <th className="px-6 py-4 font-semibold">Total</th>
+                  <th className="px-6 py-4 font-semibold">Date</th>
+                  <th className="px-6 py-4 font-semibold text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredSales.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-16 text-center">
+                      <p className="text-text-muted-light dark:text-text-muted-dark text-sm">
+                        No sales match &ldquo;{searchQuery}&rdquo;
+                      </p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredSales.map((sale) => (
+                    <tr
+                      key={sale.id}
+                      className="border-b border-border-light dark:border-border-dark last:border-b-0 hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors"
+                    >
+                      <td className="px-6 py-4 text-sm font-medium text-text-primary-light dark:text-text-primary-dark whitespace-nowrap">
+                        {sale.productName}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                        {sale.quantity}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-text-secondary-light dark:text-text-secondary-dark whitespace-nowrap">
+                        {formatMoney(sale.unitPrice)}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium sk-badge bg-[#2563EB]/10 text-[#2563EB]">
+                          {formatMoney(sale.total)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-xs text-text-secondary-light dark:text-text-secondary-dark whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1.5">
+                          <CalendarClock className="w-3.5 h-3.5" />
+                          {formatDate(sale.createdAt)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => openEditModal(sale)}
+                            className="p-2 sk-btn rounded-lg"
+                            title="Edit sale"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setDeleteId(sale.id)}
+                            aria-label={`Delete sale of ${sale.productName}`}
+                            title="Delete sale"
+                            className="p-2 text-danger border border-red-300/70 dark:border-red-900/60 rounded-lg bg-gradient-to-b from-[#fff5f5] to-[#fee2e2] dark:from-[#33171a] dark:to-[#200d10] shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_1px_2px_rgba(15,23,42,0.14)] hover:from-[#ffefef] hover:to-[#fecaca] dark:hover:from-[#3d1d21] dark:hover:to-[#2a1214] active:translate-y-px active:shadow-[inset_0_2px_5px_rgba(220,38,38,0.25)] transition-all duration-150"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
-        ))}
-      </div>
+        </>
+      )}
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="sk-panel w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                Record a Sale
+                {editingSaleId ? "Edit Sale" : "Record a Sale"}
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
@@ -288,7 +357,9 @@ export default function DashboardSalesPage() {
                       <option
                         key={product.id}
                         value={product.id}
-                        disabled={product.stock <= 0}
+                        disabled={
+                          product.stock <= 0 && product.id !== editingSale?.productId
+                        }
                       >
                         {product.name} — {product.stock} in stock
                       </option>
@@ -328,8 +399,8 @@ export default function DashboardSalesPage() {
                 {selectedProduct && (
                   <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
                     <ShoppingCart className="w-4 h-4 text-[#2563EB]" />
-                    {selectedProduct.stock} unit
-                    {selectedProduct.stock === 1 ? "" : "s"} available in stock
+                    {availableStock} unit
+                    {availableStock === 1 ? "" : "s"} available in stock
                   </div>
                 )}
 
@@ -364,7 +435,13 @@ export default function DashboardSalesPage() {
                     disabled={saving}
                     className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-gradient-to-b from-[#3f83f8] to-[#2058d8] border border-[#1e40af] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),inset_0_-1px_0_rgba(0,0,0,0.28)] hover:brightness-105 transition-all duration-150"
                   >
-                    {saving ? "Recording..." : "Record Sale"}
+                    {saving
+                      ? editingSaleId
+                        ? "Saving..."
+                        : "Recording..."
+                      : editingSaleId
+                        ? "Save Changes"
+                        : "Record Sale"}
                   </button>
                 </div>
               </form>

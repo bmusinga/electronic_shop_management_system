@@ -274,18 +274,20 @@ export default function DashboardProductsPage() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark">
-            Manage Products
-          </h1>
-          <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark mt-1">
-            Add, edit, or remove products from your inventory
-          </p>
+      <div className="mx-auto mb-6 flex w-full max-w-2xl items-center gap-3 sm:gap-4">
+        <div className="relative min-w-0 flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted-light dark:text-text-muted-dark" />
+          <input
+            type="text"
+            placeholder="Search products..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="sk-input h-11 w-full rounded-xl pl-10 pr-4 text-sm text-text-primary-light dark:text-text-primary-dark placeholder-text-muted-light dark:placeholder-text-muted-dark"
+          />
         </div>
         <button
           onClick={openAddModal}
-          className="inline-flex items-center gap-2 px-4 py-2.5 text-white text-sm font-medium rounded-xl sk-btn-primary"
+          className="inline-flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-4 text-sm font-medium text-white sk-btn-primary"
         >
           <Plus className="w-4 h-4" />
           Add Product
@@ -298,17 +300,6 @@ export default function DashboardProductsPage() {
           <p className="text-sm text-red-700 dark:text-red-400">{loadError}</p>
         </div>
       )}
-
-      <div className="relative mb-4 max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted-light dark:text-text-muted-dark" />
-        <input
-          type="text"
-          placeholder="Search products..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 sk-input rounded-xl text-sm text-text-primary-light dark:text-text-primary-dark placeholder-text-muted-light dark:placeholder-text-muted-dark"
-        />
-      </div>
 
       {deleteTarget && (
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/40 rounded-xl px-4 py-3 mb-4">
@@ -388,7 +379,7 @@ export default function DashboardProductsPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm font-semibold text-text-primary-light dark:text-text-primary-dark whitespace-nowrap">
-                      ${product.price.toLocaleString()}
+                          {product.price.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 text-sm text-text-secondary-light dark:text-text-secondary-dark">
                       {product.stock}
@@ -463,7 +454,7 @@ export default function DashboardProductsPage() {
                         {product.category}
                       </span>
                       <span className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark">
-                        ${product.price.toLocaleString()}
+                        {product.price.toLocaleString()}
                       </span>
                     </div>
                     <div className="mt-1.5 text-xs text-text-secondary-light dark:text-text-secondary-dark">

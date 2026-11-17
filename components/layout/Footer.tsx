@@ -9,7 +9,6 @@ const links = [
   { href: "/products?category=Laptops", label: "Laptops" },
   { href: "/#repair", label: "Repairs" },
   { href: "/about", label: "About" },
-  { href: "/contact", label: "Contact" },
   { href: "/repairs", label: "Book a Repair" },
 ];
 
