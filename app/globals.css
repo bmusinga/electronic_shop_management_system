@@ -97,6 +97,10 @@ body {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+.no-spinner { -moz-appearance: textfield; appearance: textfield; }
+.no-spinner::-webkit-outer-spin-button,
+.no-spinner::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
 /* ------------------------------------------------------------------ */
 /*  Skeuomorphic design system                                          */
 /* ------------------------------------------------------------------ */
@@ -263,6 +267,28 @@ body {
     inset 0 2px 5px rgba(15, 23, 42, 0.12),
     inset 0 -1px 0 var(--sk-emboss-high),
     0 0 0 3px rgba(37, 99, 235, 0.22);
+}
+
+select {
+  color-scheme: light;
+}
+
+select option {
+  color: #14202a;
+  background-color: #ffffff;
+}
+
+.dark select {
+  color-scheme: dark;
+}
+
+.dark select option {
+  color: #eaf0f5;
+  background-color: #17222f;
+}
+
+.dark select option:disabled {
+  color: #7c8ea1;
 }
 
 /* Convex pill badge (color applied with color utilities) */

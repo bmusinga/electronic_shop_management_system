@@ -20,17 +20,24 @@ interface ProductBody {
   stock?: unknown;
   image?: unknown;
   driveFileId?: unknown;
+  isOffer?: unknown;
+  percentOff?: unknown;
 }
 
 function parseProductInput(body: ProductBody): ProductInput {
   return {
     name: requireString(body.name, "Name", 200),
     description: optionalString(body.description, 4000),
-    price: requireNumber(body.price, "price", { min: 0 }),
+    price: requireNumber(body.price, "price", { min: 1 }),
     category: requireString(body.category, "Category", 100),
-    stock: requireNumber(body.stock, "stock", { min: 0, integer: true }),
+    stock: requireNumber(body.stock, "stock", { min: 1, integer: true }),
     image: optionalString(body.image, 2000),
     driveFileId: optionalString(body.driveFileId, 200),
+    isOffer: body.isOffer === true,
+    percentOff:
+      body.isOffer === true
+        ? requireNumber(body.percentOff ?? 0, "percent off", { min: 1, max: 100 })
+        : 0,
   };
 }
 

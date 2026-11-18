@@ -20,17 +20,6 @@ type CrazyOffer = {
 
 const LABELS = ["Hot deal", "Limited time deal", "Clearance", "New arrival"];
 
-const SAMPLES: CrazyOffer[] = [
-  { id: "s1", name: "Smartwatch", image: "", linkUrl: "/products", currentPrice: 3299, oldPrice: 3999, label: "Hot deal" },
-  { id: "s2", name: "Laptop", image: "", linkUrl: "/products?category=Laptops", currentPrice: 45999, oldPrice: 52999, label: "Limited time deal" },
-  { id: "s3", name: "Wireless Earbuds", image: "", linkUrl: "/products?category=Accessories", currentPrice: 1899, oldPrice: 2499, label: "Hot deal" },
-  { id: "s4", name: "Headphones", image: "", linkUrl: "/products?category=TV%20%26%20Audio", currentPrice: 3499, oldPrice: 4499, label: "Clearance" },
-  { id: "s5", name: "Bluetooth Speaker", image: "", linkUrl: "/products?category=TV%20%26%20Audio", currentPrice: 2799, oldPrice: 3599, label: "Hot deal" },
-  { id: "s6", name: "Power Bank", image: "", linkUrl: "/products?category=Accessories", currentPrice: 2199, oldPrice: 2999, label: "Limited time deal" },
-  { id: "s7", name: "4K TV", image: "", linkUrl: "/products?category=TV%20%26%20Audio", currentPrice: 34999, oldPrice: 42999, label: "Hot deal" },
-  { id: "s8", name: "Smartphone", image: "", linkUrl: "/products?category=Phones", currentPrice: 15999, oldPrice: 18999, label: "New arrival" },
-];
-
 function formatKes(v: number) {
   return Math.round(v || 0).toLocaleString("en-KE");
 }
@@ -41,16 +30,23 @@ function discountPercent(current: number, old?: number) {
 }
 
 function migrateFromProducts(products: Product[]): CrazyOffer[] {
-  return products.slice(0, 8).map((p) => ({
-    id: p.id,
-    name: p.name || "Product",
-    image: p.image || "",
-    linkUrl: `/products?category=${encodeURIComponent(p.category || "")}`,
-    currentPrice: p.price || 0,
-    oldPrice: undefined,
-    label: "Hot deal",
-    endsAt: undefined,
-  }));
+  return products
+    .filter((p) => p.isOffer && p.name)
+    .slice(0, 8)
+    .map((p) => {
+      const percent = Math.min(100, Math.max(0, p.percentOff || 0));
+      const price = p.price || 0;
+      return {
+        id: p.id,
+        name: p.name,
+        image: p.image || "",
+        linkUrl: `/products?category=${encodeURIComponent(p.category || "")}`,
+        currentPrice: Math.round(price * (1 - percent / 100) * 100) / 100,
+        oldPrice: percent > 0 ? price : undefined,
+        label: "Hot deal",
+        endsAt: undefined,
+      };
+    });
 }
 
 function formatCountdown(ms: number) {
@@ -85,13 +81,10 @@ export default function CrazyOffersSection() {
     let active = true;
     apiFetch<Product[]>("/api/products", { cache: "no-store" })
       .then((items) => {
-        if (!active) return;
-        const base = migrateFromProducts((items || []).filter((p) => p && p.name));
-        const merged = base.length < 8 ? [...base, ...SAMPLES.slice(0, 8 - base.length)] : base;
-        setOffers(merged);
+        if (active) setOffers(migrateFromProducts(items || []));
       })
       .catch(() => {
-        if (active) setOffers(SAMPLES);
+        if (active) setOffers([]);
       });
     return () => {
       active = false;
@@ -222,46 +215,52 @@ export default function CrazyOffersSection() {
             className="crazy-row flex flex-nowrap items-start overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
             style={{ gap: 8, scrollSnapType: "x proximity", paddingRight: 0 }}
           >
-            {visible.map((o) => {
-              const pct = discountPercent(o.currentPrice, o.oldPrice);
-              const remaining = o.endsAt ? new Date(o.endsAt).getTime() - now : null;
-              const badgeLabel =
-                remaining !== null && remaining > 0 ? formatCountdown(remaining) : o.label;
-              return (
-                <Link
-                  key={o.id}
-                  href={o.linkUrl || "/products"}
-                  aria-label={o.name}
-                  className="crazy-card group snap-start shrink-0 bg-white dark:bg-[#0A1F44] text-[#14202a] dark:text-white rounded-lg flex flex-col transition-transform duration-150 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff7a1a]"
-                  style={{ padding: 8, gap: 6, height: "auto", minWidth: 120 }}
-                >
-                  <div className="w-full bg-white dark:bg-[#0A1F44] flex items-center justify-center overflow-hidden" style={{ height: 125 }}>
-                    {o.image ? (
-                      <img src={o.image} alt={o.name} className="h-full w-full object-contain" />
-                    ) : (
-                      <span className="text-2xl opacity-40" aria-hidden="true">🛍️</span>
-                    )}
-                  </div>
-                  <div className="flex items-center" style={{ gap: 4, minHeight: 32 }}>
-                    {pct > 0 && (
-                      <span className="bg-[#d6213b] text-white font-bold text-[12px] rounded-[4px] whitespace-nowrap" style={{ padding: "3px 6px" }}>
-                        {pct}% off
+            {visible.length === 0 ? (
+              <div className="w-full py-8 text-center text-sm text-white/80">
+                No offers available right now.
+              </div>
+            ) : (
+              visible.map((o) => {
+                const pct = discountPercent(o.currentPrice, o.oldPrice);
+                const remaining = o.endsAt ? new Date(o.endsAt).getTime() - now : null;
+                const badgeLabel =
+                  remaining !== null && remaining > 0 ? formatCountdown(remaining) : o.label;
+                return (
+                  <Link
+                    key={o.id}
+                    href={o.linkUrl || "/products"}
+                    aria-label={o.name}
+                    className="crazy-card group snap-start shrink-0 bg-white dark:bg-[#0A1F44] text-[#14202a] dark:text-white rounded-lg flex flex-col transition-transform duration-150 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff7a1a]"
+                    style={{ padding: 8, gap: 6, height: "auto", minWidth: 120 }}
+                  >
+                    <div className="w-full bg-white dark:bg-[#0A1F44] flex items-center justify-center overflow-hidden" style={{ height: 125 }}>
+                      {o.image ? (
+                        <img src={o.image} alt={o.name} className="h-full w-full object-contain" />
+                      ) : (
+                        <span className="text-2xl opacity-40" aria-hidden="true">🛍️</span>
+                      )}
+                    </div>
+                    <div className="flex items-center" style={{ gap: 4, minHeight: 32 }}>
+                      {pct > 0 && (
+                        <span className="bg-[#d6213b] text-white font-bold text-[12px] rounded-[4px] whitespace-nowrap" style={{ padding: "3px 6px" }}>
+                          {pct}% off
+                        </span>
+                      )}
+                      <span className="text-[#d6213b] dark:text-[#ff8a9b] font-bold text-[12px] leading-tight line-clamp-2">{badgeLabel}</span>
+                    </div>
+                    <div className="flex items-baseline flex-wrap" style={{ gap: 6 }}>
+                      <span className="font-bold text-[18px] leading-tight text-[#14202a] dark:text-white">
+                        <span className="text-[11px] font-semibold mr-0.5">KES</span>
+                        {formatKes(o.currentPrice)}
                       </span>
-                    )}
-                    <span className="text-[#d6213b] dark:text-[#ff8a9b] font-bold text-[12px] leading-tight line-clamp-2">{badgeLabel}</span>
-                  </div>
-                  <div className="flex items-baseline flex-wrap" style={{ gap: 6 }}>
-                    <span className="font-bold text-[18px] leading-tight text-[#14202a] dark:text-white">
-                      <span className="text-[11px] font-semibold mr-0.5">KES</span>
-                      {formatKes(o.currentPrice)}
-                    </span>
-                    {o.oldPrice && o.oldPrice > o.currentPrice && (
-                      <span className="text-[12px] text-gray-500 dark:text-white/60 line-through">KES {formatKes(o.oldPrice)}</span>
-                    )}
-                  </div>
-                </Link>
-              );
-            })}
+                      {o.oldPrice && o.oldPrice > o.currentPrice && (
+                        <span className="text-[12px] text-gray-500 dark:text-white/60 line-through">KES {formatKes(o.oldPrice)}</span>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })
+            )}
           </div>
           {canRight && (
             <button

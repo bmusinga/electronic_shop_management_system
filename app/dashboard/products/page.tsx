@@ -14,13 +14,20 @@ import {
 import ProductImage from "@/components/ui/ProductImage";
 import { useCollectionStream } from "@/hooks/useCollectionStream";
 import { apiFetch } from "@/lib/client-api";
-import { getStockStatus, getStockBadgeClass } from "@/lib/stock";
+import { getStockStatus, type StockStatus } from "@/lib/stock";
 import type { Product, ProductFormValues, ProductInput } from "@/lib/types";
 
 const categories = ["Smartphones", "Laptops", "Audio", "Accessories", "Wearables"];
+const NEW_CATEGORY = "__new__";
 
 const MAX_IMAGE_DIMENSION = 1200;
 const IMAGE_QUALITY = 0.7;
+
+function stockTextClass(status: StockStatus): string {
+  if (status === "In Stock") return "text-emerald-700 dark:text-emerald-400";
+  if (status === "Low Stock") return "text-red-700 dark:text-red-400";
+  return "text-red-700 dark:text-red-400";
+}
 
 function processImageFile(file: File): Promise<Blob> {
   return new Promise((resolve, reject) => {
@@ -67,6 +74,8 @@ const emptyForm: ProductFormValues = {
   stock: "",
   image: "",
   driveFileId: "",
+  isOffer: false,
+  percentOff: "",
 };
 
 function parseDriveFileId(url?: string | null): string | null {
@@ -112,15 +121,20 @@ async function deleteImageFromServer(
   } catch {}
 }
 
-function toProductData(form: ProductFormValues): ProductInput {
+function toProductData(
+  form: ProductFormValues,
+  category: string = form.category
+): ProductInput {
   return {
     name: form.name.trim(),
     description: form.description.trim(),
     price: Number(form.price),
-    category: form.category,
+    category,
     stock: Number(form.stock),
     image: form.image.trim(),
     driveFileId: form.driveFileId.trim(),
+    isOffer: form.isOffer,
+    percentOff: form.isOffer ? Number(form.percentOff || 0) : 0,
   };
 }
 
@@ -138,8 +152,13 @@ export default function DashboardProductsPage() {
   const [form, setForm] = useState<ProductFormValues>(emptyForm);
   const [formError, setFormError] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [newCategory, setNewCategory] = useState("");
 
   const loadError = streamError || actionError;
+
+  const categoryOptions = Array.from(
+    new Set([...categories, ...products.map((p) => p.category).filter(Boolean)])
+  );
 
   const filteredProducts = products.filter((product) =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -155,6 +174,7 @@ export default function DashboardProductsPage() {
 
   function openAddModal() {
     setForm(emptyForm);
+    setNewCategory("");
     setFormError("");
     setIsModalOpen(true);
   }
@@ -169,7 +189,10 @@ export default function DashboardProductsPage() {
       stock: String(product.stock),
       image: product.image,
       driveFileId: product.driveFileId || "",
+      isOffer: Boolean(product.isOffer),
+      percentOff: product.percentOff ? String(product.percentOff) : "",
     });
+    setNewCategory("");
     setFormError("");
     setIsModalOpen(true);
   }
@@ -181,6 +204,7 @@ export default function DashboardProductsPage() {
     }
     setIsModalOpen(false);
     setForm(emptyForm);
+    setNewCategory("");
     setFormError("");
   }
 
@@ -215,13 +239,31 @@ export default function DashboardProductsPage() {
     e.preventDefault();
     setFormError("");
     setActionError("");
+    const category =
+      form.category === NEW_CATEGORY ? newCategory.trim() : form.category;
+    if (form.category === NEW_CATEGORY && !category) {
+      setFormError("Enter a new category name.");
+      return;
+    }
+    if (form.isOffer) {
+      const percent = Number(form.percentOff);
+      if (
+        !form.percentOff ||
+        !Number.isFinite(percent) ||
+        percent < 1 ||
+        percent > 100
+      ) {
+        setFormError("Discount must be between 1 and 100%.");
+        return;
+      }
+    }
     setSaving(true);
     try {
       if (form.id) {
         const existing = products.find((product) => product.id === form.id);
         await apiFetch<{ ok: boolean }>(`/api/products/${form.id}`, {
           method: "PATCH",
-          body: JSON.stringify(toProductData(form)),
+          body: JSON.stringify(toProductData(form, category)),
         });
         const existingFileId =
           existing?.driveFileId || parseDriveFileId(existing?.image);
@@ -232,11 +274,12 @@ export default function DashboardProductsPage() {
       } else {
         await apiFetch<{ id: string }>("/api/products", {
           method: "POST",
-          body: JSON.stringify(toProductData(form)),
+          body: JSON.stringify(toProductData(form, category)),
         });
       }
       setIsModalOpen(false);
       setForm(emptyForm);
+      setNewCategory("");
     } catch (err) {
       setFormError(
         err instanceof Error ? err.message : "Could not save the product."
@@ -374,7 +417,7 @@ export default function DashboardProductsPage() {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <span className="inline-block text-xs font-medium px-2.5 py-1 rounded-full sk-badge bg-primary-light text-primary dark:bg-blue-900/40 dark:text-blue-300 whitespace-nowrap">
+                      <span className="text-sm font-medium text-primary dark:text-blue-300 whitespace-nowrap">
                         {product.category}
                       </span>
                     </td>
@@ -385,11 +428,7 @@ export default function DashboardProductsPage() {
                       {product.stock}
                     </td>
                     <td className="px-6 py-4">
-                      <span
-                        className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${getStockBadgeClass(
-                          status
-                        )}`}
-                      >
+                      <span className={`text-sm font-medium whitespace-nowrap ${stockTextClass(status)}`}>
                         {status}
                       </span>
                     </td>
@@ -548,12 +587,12 @@ export default function DashboardProductsPage() {
                   <input
                     type="number"
                     required
-                    min="0"
+                    min="1"
                     step="0.01"
                     value={form.price}
                     onChange={(e) => setForm({ ...form, price: e.target.value })}
-                    className="w-full px-3.5 py-2.5 sk-input rounded-xl text-sm text-text-primary-light dark:text-text-primary-dark placeholder-text-muted-light dark:placeholder-text-muted-dark"
-                    placeholder="0.00"
+                    className="no-spinner w-full px-3.5 py-2.5 sk-input rounded-xl text-sm text-text-primary-light dark:text-text-primary-dark placeholder-text-muted-light dark:placeholder-text-muted-dark"
+                    placeholder="price"
                   />
                 </div>
 
@@ -564,11 +603,11 @@ export default function DashboardProductsPage() {
                   <input
                     type="number"
                     required
-                    min="0"
+                    min="1"
                     value={form.stock}
                     onChange={(e) => setForm({ ...form, stock: e.target.value })}
-                    className="w-full px-3.5 py-2.5 sk-input rounded-xl text-sm text-text-primary-light dark:text-text-primary-dark placeholder-text-muted-light dark:placeholder-text-muted-dark"
-                    placeholder="0"
+                    className="no-spinner w-full px-3.5 py-2.5 sk-input rounded-xl text-sm text-text-primary-light dark:text-text-primary-dark placeholder-text-muted-light dark:placeholder-text-muted-dark"
+                    placeholder="stock"
                   />
                 </div>
 
@@ -582,12 +621,63 @@ export default function DashboardProductsPage() {
                     onChange={(e) => setForm({ ...form, category: e.target.value })}
                     className="w-full px-3.5 py-2.5 sk-input rounded-xl text-sm text-text-primary-light dark:text-text-primary-dark focus:ring-2 focus:ring-primary"
                   >
-                    {categories.map((category) => (
+                    <option value={NEW_CATEGORY}>Add New category</option>
+                    {categoryOptions.map((category) => (
                       <option key={category} value={category}>
                         {category}
                       </option>
                     ))}
                   </select>
+                  {form.category === NEW_CATEGORY && (
+                    <input
+                      type="text"
+                      required
+                      value={newCategory}
+                      onChange={(e) => setNewCategory(e.target.value)}
+                      className="mt-2 w-full px-3.5 py-2.5 sk-input rounded-xl text-sm text-text-primary-light dark:text-text-primary-dark placeholder-text-muted-light dark:placeholder-text-muted-dark"
+                      placeholder="New category"
+                    />
+                  )}
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-2.5 cursor-pointer mb-1.5">
+                    <input
+                      type="checkbox"
+                      checked={form.isOffer}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          isOffer: e.target.checked,
+                          percentOff: e.target.checked ? form.percentOff : "",
+                        })
+                      }
+                      className="w-4 h-4 accent-[#ff7a1a]"
+                    />
+                    <span className="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+                      Set offer{" "}
+                      <span className="text-xs font-normal text-text-muted-light dark:text-text-muted-dark">
+                        (optional)
+                      </span>
+                    </span>
+                  </label>
+                  <div>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      step="0.01"
+                      value={form.percentOff}
+                      onChange={(e) =>
+                        setForm({ ...form, percentOff: e.target.value })
+                      }
+                      className="no-spinner w-full px-3.5 py-2.5 sk-input rounded-xl text-sm text-text-primary-light dark:text-text-primary-dark placeholder-text-muted-light dark:placeholder-text-muted-dark"
+                      placeholder="% off"
+                    />
+                    <p className="mt-1.5 text-xs text-text-muted-light dark:text-text-muted-dark">
+                      This product will appear in Check out our crazy offers.
+                    </p>
+                  </div>
                 </div>
 
                 <div className="sm:col-span-2">
@@ -662,10 +752,6 @@ export default function DashboardProductsPage() {
                               }}
                             />
                           </div>
-                          <p className="text-xs text-text-muted-light dark:text-text-muted-dark">
-                            Optional. JPG, PNG, or WEBP. Images are compressed and
-                            saved to the store&apos;s Google Drive.
-                          </p>
                         </>
                       )}
                     </div>

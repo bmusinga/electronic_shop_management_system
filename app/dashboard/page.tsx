@@ -19,8 +19,9 @@ import {
   Cell,
 } from "recharts";
 import { useCollectionStream } from "@/hooks/useCollectionStream";
-import { getStockStatus, getStockBadgeClass } from "@/lib/stock";
-import type { Product } from "@/lib/types";
+import ProductImage from "@/components/ui/ProductImage";
+import { getStockStatus } from "@/lib/stock";
+import type { Product, Sale } from "@/lib/types";
 
 type StatKey = "total" | "inStock" | "lowStock" | "outOfStock";
 
@@ -74,6 +75,14 @@ interface CategoryTooltipProps {
   label?: string | number;
 }
 
+function formatSaleTime(value?: string): string {
+  if (!value) return "";
+  return new Date(value).toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function CategoryTooltip({ active, payload, label }: CategoryTooltipProps) {
   if (active && payload && payload.length) {
     return (
@@ -91,10 +100,15 @@ function CategoryTooltip({ active, payload, label }: CategoryTooltipProps) {
 }
 
 export default function DashboardPage() {
-  const { data: products, loading } = useCollectionStream<Product>(
-    "/api/products/stream",
-    "products"
-  );
+  const {
+    data: products,
+    loading: productsLoading,
+  } = useCollectionStream<Product>("/api/products/stream", "products");
+  const {
+    data: sales,
+    loading: salesLoading,
+  } = useCollectionStream<Sale>("/api/sales/stream", "sales");
+  const loading = productsLoading || salesLoading;
   const stats: Record<StatKey, number> = {
     total: products.length,
     inStock: products.filter((p) => getStockStatus(p.stock) === "In Stock").length,
@@ -111,7 +125,14 @@ export default function DashboardPage() {
     ([name, count]) => ({ name, count })
   );
 
-  const latestProducts = products.slice(0, 5);
+  const today = new Date();
+  const recentSales = sales
+    .filter((sale) => {
+      if (!sale.createdAt) return false;
+      const date = new Date(sale.createdAt);
+      return date.toDateString() === today.toDateString();
+    })
+    .slice(0, 5);
 
   return (
     <div className="space-y-6">
@@ -190,70 +211,117 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Latest Products Table */}
+      {/* Recent Sales */}
       <div className="sk-panel">
         <div className="p-6 border-b border-border-light dark:border-border-dark">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-            Latest Products
+            Recent Sales
           </h2>
         </div>
-        <div className="overflow-x-auto px-1 pb-1">
-          <table className="w-full">
+        <div className="hidden md:block overflow-x-auto px-1 pb-1">
+          <table className="w-full min-w-[640px]">
             <thead>
               <tr className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <th className="px-6 py-3">Image</th>
                 <th className="px-6 py-3">Product</th>
-                <th className="px-6 py-3">Category</th>
-                <th className="px-6 py-3">Price</th>
-                <th className="px-6 py-3">Stock</th>
-                <th className="px-6 py-3">Status</th>
+                <th className="px-6 py-3">Quantity</th>
+                <th className="px-6 py-3">Total</th>
+                <th className="px-6 py-3">Time</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-              {latestProducts.length === 0 ? (
+              {recentSales.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-16 text-center">
                     <p className="text-sm text-slate-500 dark:text-slate-400">
                       {loading
-                        ? "Loading products..."
-                        : "No products added yet."}
+                        ? "Loading sales..."
+                        : "No sales recorded today."}
                     </p>
                   </td>
                 </tr>
               ) : (
-                latestProducts.map((product) => {
-                  const status = getStockStatus(product.stock);
-                  return (
-                    <tr
-                      key={product.id}
-                      className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-                    >
-                      <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
-                        {product.name}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">
-                        {product.category}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
-                        {product.price.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
-                        {product.stock}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStockBadgeClass(
-                            status
-                          )}`}
-                        >
-                          {status}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })
+                recentSales.map((sale) => (
+                  <tr
+                    key={sale.id}
+                    className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                  >
+                    <td className="px-6 py-4">
+                      <ProductImage
+                        src={products.find((p) => p.id === sale.productId)?.image}
+                        alt={sale.productName}
+                        width={40}
+                        height={40}
+                        className="w-10 h-10 object-cover rounded-lg bg-slate-100 dark:bg-slate-700"
+                      />
+                    </td>
+                    <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
+                      {sale.productName}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">
+                      {sale.quantity}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
+                      {sale.total.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
+                      {formatSaleTime(sale.createdAt)}
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
+        </div>
+        <div className="grid grid-cols-1 gap-4 p-4 md:hidden">
+          {recentSales.length === 0 ? (
+            <p className="py-10 text-center text-sm text-slate-500 dark:text-slate-400">
+              {loading ? "Loading sales..." : "No sales recorded today."}
+            </p>
+          ) : (
+            recentSales.map((sale) => (
+              <div
+                key={sale.id}
+                className="bg-white dark:bg-[#0A1F44] border border-[#d5dce2] dark:border-[#2a3a47] rounded-[10px] overflow-hidden"
+              >
+                <div className="flex gap-3 p-4 border-b border-[#d5dce2] dark:border-[#2a3a47]">
+                  <ProductImage
+                    src={products.find((p) => p.id === sale.productId)?.image}
+                    alt={sale.productName}
+                    width={56}
+                    height={56}
+                    className="w-14 h-14 object-cover rounded-lg bg-[#f9fafb] dark:bg-[#0A1F44]"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-base font-semibold text-[#14202a] dark:text-[#eaf0f5] line-clamp-2">
+                      {sale.productName}
+                    </h3>
+                    <p className="mt-1 text-sm text-[#5b6b78] dark:text-[#9fb0be]">
+                      {formatSaleTime(sale.createdAt)}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-2 px-4 py-3">
+                  <div>
+                    <p className="text-xs text-[#5b6b78] dark:text-[#9fb0be]">
+                      Quantity
+                    </p>
+                    <p className="text-sm font-medium text-[#14202a] dark:text-[#eaf0f5]">
+                      {sale.quantity}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-[#5b6b78] dark:text-[#9fb0be]">
+                      Total
+                    </p>
+                    <p className="text-lg font-bold text-[#14202a] dark:text-[#eaf0f5]">
+                      {sale.total.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

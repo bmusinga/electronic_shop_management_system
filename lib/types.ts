@@ -7,6 +7,8 @@ export interface Product {
   stock: number;
   image: string;
   driveFileId?: string;
+  isOffer?: boolean;
+  percentOff?: number;
   rating?: number;
   createdAt?: string;
   updatedAt?: string;
@@ -20,6 +22,8 @@ export interface ProductInput {
   stock: number;
   image: string;
   driveFileId?: string;
+  isOffer: boolean;
+  percentOff: number;
 }
 
 export interface ProductFormValues {
@@ -31,6 +35,8 @@ export interface ProductFormValues {
   stock: string;
   image: string;
   driveFileId: string;
+  isOffer: boolean;
+  percentOff: string;
 }
 
 export interface ContactMessage {

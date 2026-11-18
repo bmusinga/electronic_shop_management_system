@@ -31,6 +31,9 @@ const pageMeta: Record<
 const iconButton =
   "w-10 h-10 flex items-center justify-center rounded-lg border border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark bg-gradient-to-b from-white to-[#e2e8f0] dark:from-[#2a3a50] dark:to-[#16202f] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_1px_2px_rgba(15,23,42,0.18)] active:translate-y-px active:shadow-[inset_0_2px_5px_rgba(15,23,42,0.22)] transition-all duration-150";
 
+const COLLAPSED_KEY = "eshop:dashboard-sidebar-collapsed";
+const MOBILE_OPEN_KEY = "eshop:dashboard-sidebar-mobile-open";
+
 const today = new Date().toLocaleDateString("en-US", {
   weekday: "long",
   year: "numeric",
@@ -42,7 +45,27 @@ export default function DashboardShell({ children }: { children: ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   const pathname = usePathname();
+
+  useEffect(() => {
+    const id: ReturnType<typeof setTimeout> = setTimeout(() => {
+      try {
+        setSidebarCollapsed(window.localStorage.getItem(COLLAPSED_KEY) === "true");
+        setMobileOpen(window.localStorage.getItem(MOBILE_OPEN_KEY) === "true");
+      } catch {}
+      setHydrated(true);
+    }, 0);
+    return () => clearTimeout(id);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      window.localStorage.setItem(COLLAPSED_KEY, String(sidebarCollapsed));
+      window.localStorage.setItem(MOBILE_OPEN_KEY, String(mobileOpen));
+    } catch {}
+  }, [sidebarCollapsed, mobileOpen, hydrated]);
 
   useEffect(() => {
     const mql = window.matchMedia("(max-width: 767px)");

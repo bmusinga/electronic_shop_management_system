@@ -8,12 +8,12 @@ import {
   ShoppingCart,
   Search,
   Inbox,
-  CalendarClock,
   X,
   AlertCircle,
   PackageX,
 } from "lucide-react";
 import { useCollectionStream } from "@/hooks/useCollectionStream";
+import ProductImage from "@/components/ui/ProductImage";
 import { apiFetch } from "@/lib/client-api";
 import type { Product, Sale } from "@/lib/types";
 
@@ -170,8 +170,6 @@ export default function DashboardSalesPage() {
     }
   }
 
-  const saleProjectsSold = sales.reduce((sum, sale) => sum + sale.quantity, 0);
-  const totalRevenue = sales.reduce((sum, sale) => sum + sale.total, 0);
   const filteredSales = sales.filter((sale) =>
     sale.productName.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -197,21 +195,6 @@ export default function DashboardSalesPage() {
           New Sale
         </button>
       </div>
-
-      {!loading && !loadError && sales.length > 0 && (
-        <div className="flex flex-wrap gap-3">
-          <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg sk-panel text-sm font-medium text-slate-700 dark:text-slate-200">
-            <ShoppingCart className="w-4 h-4 text-[#2563EB]" />
-            {sales.length} sale{sales.length === 1 ? "" : "s"}
-          </span>
-          <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg sk-panel text-sm font-medium text-slate-700 dark:text-slate-200">
-            {saleProjectsSold} unit{saleProjectsSold === 1 ? "" : "s"} sold
-          </span>
-          <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg sk-panel text-sm font-medium text-slate-700 dark:text-slate-200">
-            {formatMoney(totalRevenue)} total revenue
-          </span>
-        </div>
-      )}
 
       {loadError && (
         <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
@@ -242,10 +225,11 @@ export default function DashboardSalesPage() {
 
       {!loading && !loadError && sales.length > 0 && (
         <>
-          <div className="sk-panel overflow-x-auto">
+          <div className="hidden md:block sk-panel overflow-x-auto">
             <table className="w-full min-w-[800px] text-left">
               <thead>
                 <tr className="border-b border-border-light dark:border-border-dark text-xs uppercase tracking-wider text-text-muted-light dark:text-text-muted-dark">
+                  <th className="px-6 py-4 font-semibold">Image</th>
                   <th className="px-6 py-4 font-semibold">Product</th>
                   <th className="px-6 py-4 font-semibold">Quantity</th>
                   <th className="px-6 py-4 font-semibold">Unit Price</th>
@@ -257,7 +241,7 @@ export default function DashboardSalesPage() {
               <tbody>
                 {filteredSales.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-16 text-center">
+                    <td colSpan={7} className="px-6 py-16 text-center">
                       <p className="text-text-muted-light dark:text-text-muted-dark text-sm">
                         No sales match &ldquo;{searchQuery}&rdquo;
                       </p>
@@ -269,6 +253,15 @@ export default function DashboardSalesPage() {
                       key={sale.id}
                       className="border-b border-border-light dark:border-border-dark last:border-b-0 hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors"
                     >
+                      <td className="px-6 py-4">
+                        <ProductImage
+                          src={products.find((p) => p.id === sale.productId)?.image}
+                          alt={sale.productName}
+                          width={48}
+                          height={48}
+                          className="w-12 h-12 object-cover rounded-lg bg-slate-100 dark:bg-slate-700"
+                        />
+                      </td>
                       <td className="px-6 py-4 text-sm font-medium text-text-primary-light dark:text-text-primary-dark whitespace-nowrap">
                         {sale.productName}
                       </td>
@@ -278,16 +271,11 @@ export default function DashboardSalesPage() {
                       <td className="px-6 py-4 text-sm text-text-secondary-light dark:text-text-secondary-dark whitespace-nowrap">
                         {formatMoney(sale.unitPrice)}
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium sk-badge bg-[#2563EB]/10 text-[#2563EB]">
-                          {formatMoney(sale.total)}
-                        </span>
+                      <td className="px-6 py-4 text-sm font-semibold text-text-primary-light dark:text-text-primary-dark whitespace-nowrap">
+                        {formatMoney(sale.total)}
                       </td>
-                      <td className="px-6 py-4 text-xs text-text-secondary-light dark:text-text-secondary-dark whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1.5">
-                          <CalendarClock className="w-3.5 h-3.5" />
-                          {formatDate(sale.createdAt)}
-                        </span>
+                      <td className="px-6 py-4 text-sm text-text-secondary-light dark:text-text-secondary-dark whitespace-nowrap">
+                        <span>{formatDate(sale.createdAt)}</span>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-end gap-2">
@@ -314,6 +302,77 @@ export default function DashboardSalesPage() {
               </tbody>
             </table>
           </div>
+
+          <div className="grid grid-cols-1 gap-4 md:hidden">
+            {filteredSales.length === 0 ? (
+              <div className="sk-panel p-10 text-center">
+                <p className="text-text-muted-light dark:text-text-muted-dark text-sm">
+                  No sales match &ldquo;{searchQuery}&rdquo;
+                </p>
+              </div>
+            ) : (
+              filteredSales.map((sale) => (
+                <div
+                  key={sale.id}
+                  className="bg-white dark:bg-[#0A1F44] border border-[#d5dce2] dark:border-[#2a3a47] rounded-[10px] overflow-hidden"
+                >
+                  <div className="flex gap-3 p-4 border-b border-[#d5dce2] dark:border-[#2a3a47]">
+                    <ProductImage
+                      src={products.find((p) => p.id === sale.productId)?.image}
+                      alt={sale.productName}
+                      width={64}
+                      height={64}
+                      className="w-16 h-16 object-cover rounded-lg bg-[#f9fafb] dark:bg-[#0A1F44]"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-base font-semibold text-[#14202a] dark:text-[#eaf0f5] line-clamp-2">
+                        {sale.productName}
+                      </h3>
+                      <p className="mt-1 text-sm text-[#5b6b78] dark:text-[#9fb0be]">
+                        {formatDate(sale.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 px-4 py-3">
+                    <div>
+                      <p className="text-xs text-[#5b6b78] dark:text-[#9fb0be]">Quantity</p>
+                      <p className="text-sm font-medium text-[#14202a] dark:text-[#eaf0f5]">
+                        {sale.quantity}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-[#5b6b78] dark:text-[#9fb0be]">Unit Price</p>
+                      <p className="text-sm font-medium text-[#14202a] dark:text-[#eaf0f5]">
+                        {formatMoney(sale.unitPrice)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-[#5b6b78] dark:text-[#9fb0be]">Total</p>
+                      <p className="text-sm font-semibold text-[#14202a] dark:text-[#eaf0f5]">
+                        {formatMoney(sale.total)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 px-4 pb-4 flex items-center gap-2">
+                    <button
+                      onClick={() => openEditModal(sale)}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium sk-btn rounded-lg"
+                    >
+                      <Edit className="w-4 h-4" />
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => setDeleteId(sale.id)}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-danger border border-red-300/70 dark:border-red-900/60 rounded-lg bg-gradient-to-b from-[#fff5f5] to-[#fee2e2] dark:from-[#33171a] dark:to-[#200d10] shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_1px_2px_rgba(15,23,42,0.14)] active:translate-y-px active:shadow-[inset_0_2px_5px_rgba(220,38,38,0.25)] transition-all duration-150"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </>
       )}
 
@@ -327,7 +386,7 @@ export default function DashboardSalesPage() {
               <button
                 onClick={() => setIsModalOpen(false)}
                 aria-label="Close"
-                className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                className="p-2 rounded-lg text-danger hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -361,7 +420,7 @@ export default function DashboardSalesPage() {
                           product.stock <= 0 && product.id !== editingSale?.productId
                         }
                       >
-                        {product.name} — {product.stock} in stock
+                        {product.name} - {product.stock} in stock
                       </option>
                     ))}
                   </select>
@@ -378,7 +437,7 @@ export default function DashboardSalesPage() {
                       step="1"
                       value={quantity}
                       onChange={(e) => setQuantity(e.target.value)}
-                      className="w-full px-3 py-2.5 sk-input rounded-lg text-sm text-text-primary-light dark:text-text-primary-dark"
+                      className="no-spinner w-full px-3 py-2.5 sk-input rounded-lg text-sm text-text-primary-light dark:text-text-primary-dark"
                     />
                   </div>
                   <div>
@@ -391,7 +450,7 @@ export default function DashboardSalesPage() {
                       step="0.01"
                       value={unitPrice}
                       onChange={(e) => setUnitPrice(e.target.value)}
-                      className="w-full px-3 py-2.5 sk-input rounded-lg text-sm text-text-primary-light dark:text-text-primary-dark"
+                      className="no-spinner w-full px-3 py-2.5 sk-input rounded-lg text-sm text-text-primary-light dark:text-text-primary-dark"
                     />
                   </div>
                 </div>
