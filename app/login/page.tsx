@@ -37,7 +37,7 @@ export default function LoginPage() {
 
   if (loading || redirecting) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#0A1F44]">
         <div className="text-slate-500 dark:text-slate-400">
           {redirecting ? "Redirecting to dashboard..." : "Loading..."}
         </div>
@@ -46,7 +46,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#0A1F44] px-4">
       <div className="sk-panel p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white [text-shadow:0_1px_0_rgba(255,255,255,0.7)] dark:[text-shadow:none]">

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/client-api";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/hooks/useTheme";
 import type { CategoryCardGroup, Product } from "@/lib/types";
 
 const DEFAULT_CARDS: CategoryCardGroup[] = [
@@ -103,6 +104,7 @@ async function resizeDataUrl(file: File): Promise<string> {
 
 export default function CategoryTiles() {
   const { user } = useAuth();
+  const { dark } = useTheme();
   const [cards, setCards] = useState<CategoryCardGroup[]>(DEFAULT_CARDS);
   const [products, setProducts] = useState<Product[]>([]);
   const [showManage, setShowManage] = useState(false);
@@ -188,10 +190,10 @@ export default function CategoryTiles() {
   };
 
   return (
-    <section className="bg-[#eef1f4] dark:bg-[#0b1218]" style={{ padding: "14px 16px", overflowX: "clip" }}>
+    <section className="bg-[#eef1f4] dark:bg-[#0A1F44]" style={{ padding: "14px 16px", overflowX: "clip" }}>
       <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" style={{ gap: 8 }}>
         {cards.map((card) => (
-          <div key={card.title} className="bg-white dark:bg-[#15202a] border border-[#d5dce2] dark:border-[#2a3a47] rounded-[12px]" style={{ padding: 12 }}>
+          <div key={card.title} className="bg-white dark:bg-[#0A1F44] border border-[#d5dce2] dark:border-[#2a3a47] rounded-[12px]" style={{ padding: 12 }}>
             <Link href={card.link || "/products"} className="flex items-start justify-between gap-2 mb-3 group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff7a1a] rounded">
               <span className="font-bold text-[21px] leading-tight text-[#14202a] dark:text-[#eaf0f5] line-clamp-2">{card.title}</span>
               <span aria-hidden="true" className="text-[#14202a] dark:text-[#eaf0f5] text-lg leading-none mt-0.5">&gt;</span>
@@ -201,8 +203,8 @@ export default function CategoryTiles() {
                 const match = tileMatch(t);
                 const href = `/products?category=${encodeURIComponent(t.category || t.label)}`;
                 return (
-                  <Link key={t.label} href={href} className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff7a1a] rounded-lg">
-                    <div className="relative w-full overflow-hidden rounded-lg flex items-center justify-center" style={{ aspectRatio: "1 / 1", backgroundColor: card.color }}>
+                  <Link key={t.label} href={href} className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff7a1a] rounded-lg border border-[#d5dce2] dark:border-[#2a3a47] p-1.5">
+                    <div className="relative w-full overflow-hidden rounded-lg flex items-center justify-center" style={{ aspectRatio: "1 / 1", backgroundColor: dark ? "#0A1F44" : card.color }}>
                       <div className="relative z-[1] w-full h-full flex items-center justify-center" style={{ padding: "8%" }}>
                         {match.image ? (
                           <img src={match.image} alt={match.productName || t.label} className="max-w-full max-h-full object-contain transition-transform duration-150 group-hover:scale-[1.04]" />
@@ -243,8 +245,8 @@ export default function CategoryTiles() {
               {draft.map((card, ci) => (
                 <div key={ci} className="p-3 rounded-lg border border-[#d5dce2] dark:border-[#2a3a47]">
                   <div className="flex flex-wrap items-center gap-2 mb-3">
-                    <input aria-label="Card title" value={card.title} onChange={(e) => setCard(ci, { title: e.target.value })} className="border border-[#d5dce2] dark:border-[#2a3a47] rounded px-3 py-2 bg-white dark:bg-[#0b1218] flex-1 min-w-[180px]" placeholder="Title" />
-                    <input aria-label="Card link" value={card.link} onChange={(e) => setCard(ci, { link: e.target.value })} className="border border-[#d5dce2] dark:border-[#2a3a47] rounded px-3 py-2 bg-white dark:bg-[#0b1218] flex-1 min-w-[180px]" placeholder="Link" />
+                    <input aria-label="Card title" value={card.title} onChange={(e) => setCard(ci, { title: e.target.value })} className="border border-[#d5dce2] dark:border-[#2a3a47] rounded px-3 py-2 bg-white dark:bg-[#0A1F44] flex-1 min-w-[180px]" placeholder="Title" />
+                    <input aria-label="Card link" value={card.link} onChange={(e) => setCard(ci, { link: e.target.value })} className="border border-[#d5dce2] dark:border-[#2a3a47] rounded px-3 py-2 bg-white dark:bg-[#0A1F44] flex-1 min-w-[180px]" placeholder="Link" />
                     <label className="flex items-center gap-2 text-sm">Color <input aria-label="Background colour" type="color" value={card.color} onChange={(e) => setCard(ci, { color: e.target.value })} /></label>
                     <button onClick={() => moveCard(ci, -1)} disabled={ci === 0} className="px-2 py-1 text-xs border rounded disabled:opacity-40">Up</button>
                     <button onClick={() => moveCard(ci, 1)} disabled={ci === draft.length - 1} className="px-2 py-1 text-xs border rounded disabled:opacity-40">Down</button>
@@ -252,9 +254,9 @@ export default function CategoryTiles() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {card.tiles.map((t, ti) => (
                       <div key={ti} className="p-2 rounded border border-[#d5dce2] dark:border-[#2a3a47] space-y-2">
-                        <input aria-label="Tile label" value={t.label} onChange={(e) => setTile(ci, ti, { label: e.target.value })} className="w-full border border-[#d5dce2] dark:border-[#2a3a47] rounded px-2 py-1.5 bg-white dark:bg-[#0b1218]" placeholder="Label" />
-                        <input aria-label="Tile category" value={t.category} onChange={(e) => setTile(ci, ti, { category: e.target.value })} className="w-full border border-[#d5dce2] dark:border-[#2a3a47] rounded px-2 py-1.5 bg-white dark:bg-[#0b1218]" placeholder="Category name (for link/products)" />
-                        <input aria-label="Tile emoji fallback" value={t.emoji} onChange={(e) => setTile(ci, ti, { emoji: e.target.value })} className="w-full border border-[#d5dce2] dark:border-[#2a3a47] rounded px-2 py-1.5 bg-white dark:bg-[#0b1218]" placeholder="Emoji fallback" />
+                        <input aria-label="Tile label" value={t.label} onChange={(e) => setTile(ci, ti, { label: e.target.value })} className="w-full border border-[#d5dce2] dark:border-[#2a3a47] rounded px-2 py-1.5 bg-white dark:bg-[#0A1F44]" placeholder="Label" />
+                        <input aria-label="Tile category" value={t.category} onChange={(e) => setTile(ci, ti, { category: e.target.value })} className="w-full border border-[#d5dce2] dark:border-[#2a3a47] rounded px-2 py-1.5 bg-white dark:bg-[#0A1F44]" placeholder="Category name (for link/products)" />
+                        <input aria-label="Tile emoji fallback" value={t.emoji} onChange={(e) => setTile(ci, ti, { emoji: e.target.value })} className="w-full border border-[#d5dce2] dark:border-[#2a3a47] rounded px-2 py-1.5 bg-white dark:bg-[#0A1F44]" placeholder="Emoji fallback" />
                         <input aria-label="Tile image" type="file" accept="image/*" onChange={(e) => onTileImage(ci, ti, e.target.files?.[0])} className="text-xs" />
                         {t.image && <button onClick={() => setTile(ci, ti, { image: "" })} className="text-xs underline">Remove image</button>}
                       </div>

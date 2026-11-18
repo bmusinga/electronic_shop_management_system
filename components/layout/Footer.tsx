@@ -7,23 +7,22 @@ const links = [
   { href: "/products", label: "All Products" },
   { href: "/products?category=Phones", label: "Phones" },
   { href: "/products?category=Laptops", label: "Laptops" },
-  { href: "/#repair", label: "Repairs" },
   { href: "/about", label: "About" },
-  { href: "/repairs", label: "Book a Repair" },
 ];
 
 export default function Footer() {
   const { dark } = useTheme();
+  const headerBg = dark ? "bg-[#0A1F44]" : "bg-[#1E3A8A]";
   return (
     <footer className="text-white">
       <button
         type="button"
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        className={`w-full ${dark ? "bg-[#0A1F44]" : "bg-[#173f52]"} hover:bg-[#1d4a60] py-3 text-center text-sm font-medium transition-colors`}
+        className={`w-full ${headerBg} border-y border-white/20 hover:brightness-110 py-3 text-center text-sm font-medium transition-colors`}
       >
         Back to top
       </button>
-      <div className="bg-[#0b1218] px-4 pt-8 pb-6 text-center">
+      <div className={`${headerBg} px-4 pt-8 pb-6 text-center`}>
         <nav className="flex flex-wrap justify-center gap-x-9 gap-y-2 text-sm" aria-label="Footer">
           {links.map((link) => (
             <Link key={link.label} href={link.href} className="text-white hover:underline">

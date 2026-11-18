@@ -8,7 +8,7 @@ const values = [
 
 export default function AboutPage() {
   return (
-    <main className="bg-[#eef1f4] dark:bg-[#0b1218] py-6">
+    <main className="bg-[#eef1f4] dark:bg-[#0A1F44] py-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
         <section className="bg-white dark:bg-[#15202a] border border-[#d5dce2] dark:border-[#2a3a47] rounded-[10px] p-6">
           <h1 className="text-3xl font-bold text-[#14202a] dark:text-[#eaf0f5] mb-3">About EShop</h1>
@@ -31,7 +31,6 @@ export default function AboutPage() {
           </div>
           <div className="flex gap-3">
             <Link href="/products" className="px-4 py-2 rounded-full bg-[#ff7a1a] font-semibold hover:bg-[#e66e15]">Shop products</Link>
-            <Link href="/#repair" className="px-4 py-2 rounded-full bg-white text-[#14202a] font-semibold hover:bg-white/90">Repair services</Link>
           </div>
         </section>
       </div>

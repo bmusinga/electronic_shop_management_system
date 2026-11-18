@@ -12,7 +12,7 @@ export default async function Home() {
   } catch {}
 
   return (
-    <main className="bg-[#eef1f4] dark:bg-[#0b1218]">
+    <main className="bg-[#eef1f4] dark:bg-[#0A1F44]">
       <OffersCarousel initialProducts={products} />
       <CrazyOffersSection />
       <CategoryTiles />

@@ -36,7 +36,7 @@ export default function OffersCarousel({ initialProducts = [] }: { initialProduc
   const duration = Math.max(20, cards.length * 6);
 
   return (
-    <section className="bg-[#eef1f4] dark:bg-[#0b1218] py-1 overflow-hidden">
+    <section className="bg-[#eef1f4] dark:bg-[#0A1F44] py-1 overflow-hidden">
       <div className="relative w-full overflow-hidden">
         <div
           className="flex gap-1 w-max"

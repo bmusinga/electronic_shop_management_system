@@ -187,7 +187,7 @@ export default function CrazyOffersSection() {
   };
 
   return (
-    <section className="bg-[#eef1f4] dark:bg-[#0b1218]">
+    <section className="bg-[#eef1f4] dark:bg-[#0A1F44]">
       <div
         className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen max-w-[100vw] bg-[#14532d] dark:bg-[#14532d] text-white my-0"
         style={{ padding: "8px 16px 16px" }}
@@ -232,10 +232,10 @@ export default function CrazyOffersSection() {
                   key={o.id}
                   href={o.linkUrl || "/products"}
                   aria-label={o.name}
-                  className="crazy-card group snap-start shrink-0 bg-white text-[#14202a] rounded-lg flex flex-col transition-transform duration-150 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff7a1a]"
+                  className="crazy-card group snap-start shrink-0 bg-white dark:bg-[#0A1F44] text-[#14202a] dark:text-white rounded-lg flex flex-col transition-transform duration-150 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff7a1a]"
                   style={{ padding: 8, gap: 6, height: "auto", minWidth: 120 }}
                 >
-                  <div className="w-full bg-white flex items-center justify-center overflow-hidden" style={{ height: 125 }}>
+                  <div className="w-full bg-white dark:bg-[#0A1F44] flex items-center justify-center overflow-hidden" style={{ height: 125 }}>
                     {o.image ? (
                       <img src={o.image} alt={o.name} className="h-full w-full object-contain" />
                     ) : (
@@ -248,15 +248,15 @@ export default function CrazyOffersSection() {
                         {pct}% off
                       </span>
                     )}
-                    <span className="text-[#d6213b] font-bold text-[12px] leading-tight line-clamp-2">{badgeLabel}</span>
+                    <span className="text-[#d6213b] dark:text-[#ff8a9b] font-bold text-[12px] leading-tight line-clamp-2">{badgeLabel}</span>
                   </div>
                   <div className="flex items-baseline flex-wrap" style={{ gap: 6 }}>
-                    <span className="font-bold text-[18px] leading-tight text-[#14202a]">
+                    <span className="font-bold text-[18px] leading-tight text-[#14202a] dark:text-white">
                       <span className="text-[11px] font-semibold mr-0.5">KES</span>
                       {formatKes(o.currentPrice)}
                     </span>
                     {o.oldPrice && o.oldPrice > o.currentPrice && (
-                      <span className="text-[12px] text-gray-500 line-through">KES {formatKes(o.oldPrice)}</span>
+                      <span className="text-[12px] text-gray-500 dark:text-white/60 line-through">KES {formatKes(o.oldPrice)}</span>
                     )}
                   </div>
                 </Link>
@@ -322,27 +322,27 @@ export default function CrazyOffersSection() {
                   placeholder="Product name"
                   value={draft.name}
                   onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                  className="border border-[#d5dce2] dark:border-[#2a3a47] rounded px-3 py-2 bg-white dark:bg-[#0b1218]"
+                  className="border border-[#d5dce2] dark:border-[#2a3a47] rounded px-3 py-2 bg-white dark:bg-[#0A1F44]"
                 />
                 <input
                   aria-label="Image URL"
                   placeholder="Image URL"
                   value={draft.image}
                   onChange={(e) => setDraft({ ...draft, image: e.target.value })}
-                  className="border border-[#d5dce2] dark:border-[#2a3a47] rounded px-3 py-2 bg-white dark:bg-[#0b1218]"
+                  className="border border-[#d5dce2] dark:border-[#2a3a47] rounded px-3 py-2 bg-white dark:bg-[#0A1F44]"
                 />
                 <input
                   aria-label="Link URL"
                   placeholder="Link URL"
                   value={draft.linkUrl}
                   onChange={(e) => setDraft({ ...draft, linkUrl: e.target.value })}
-                  className="border border-[#d5dce2] dark:border-[#2a3a47] rounded px-3 py-2 bg-white dark:bg-[#0b1218]"
+                  className="border border-[#d5dce2] dark:border-[#2a3a47] rounded px-3 py-2 bg-white dark:bg-[#0A1F44]"
                 />
                 <select
                   aria-label="Label"
                   value={draft.label}
                   onChange={(e) => setDraft({ ...draft, label: e.target.value })}
-                  className="border border-[#d5dce2] dark:border-[#2a3a47] rounded px-3 py-2 bg-white dark:bg-[#0b1218]"
+                  className="border border-[#d5dce2] dark:border-[#2a3a47] rounded px-3 py-2 bg-white dark:bg-[#0A1F44]"
                 >
                   {LABELS.map((l) => (
                     <option key={l} value={l}>
@@ -357,7 +357,7 @@ export default function CrazyOffersSection() {
                   placeholder="Current price (KES)"
                   value={draft.currentPrice}
                   onChange={(e) => setDraft({ ...draft, currentPrice: Number(e.target.value || 0) })}
-                  className="border border-[#d5dce2] dark:border-[#2a3a47] rounded px-3 py-2 bg-white dark:bg-[#0b1218]"
+                  className="border border-[#d5dce2] dark:border-[#2a3a47] rounded px-3 py-2 bg-white dark:bg-[#0A1F44]"
                 />
                 <input
                   aria-label="Old price"
@@ -367,14 +367,14 @@ export default function CrazyOffersSection() {
                   onChange={(e) =>
                     setDraft({ ...draft, oldPrice: e.target.value === "" ? undefined : Number(e.target.value) })
                   }
-                  className="border border-[#d5dce2] dark:border-[#2a3a47] rounded px-3 py-2 bg-white dark:bg-[#0b1218]"
+                  className="border border-[#d5dce2] dark:border-[#2a3a47] rounded px-3 py-2 bg-white dark:bg-[#0A1F44]"
                 />
                 <input
                   aria-label="End time"
                   type="datetime-local"
                   value={draft.endsAt || ""}
                   onChange={(e) => setDraft({ ...draft, endsAt: e.target.value })}
-                  className="border border-[#d5dce2] dark:border-[#2a3a47] rounded px-3 py-2 bg-white dark:bg-[#0b1218] sm:col-span-2"
+                  className="border border-[#d5dce2] dark:border-[#2a3a47] rounded px-3 py-2 bg-white dark:bg-[#0A1F44] sm:col-span-2"
                 />
                 {error && <p className="text-sm text-red-600 sm:col-span-2">{error}</p>}
                 <div className="sm:col-span-2 flex gap-2">

@@ -38,7 +38,7 @@ export default function FeaturedProducts() {
             {products.map((product) => {
               const stock = getStockStatus(product.stock);
               return (
-                <div key={product.id} className="border border-[#d5dce2] dark:border-[#2a3a47] rounded-lg p-3 bg-white dark:bg-[#0b1218]">
+                <div key={product.id} className="border border-[#d5dce2] dark:border-[#2a3a47] rounded-lg p-3 bg-white dark:bg-[#0A1F44]">
                   <div className="relative h-32 bg-[#eef1f4] dark:bg-[#15202a] rounded mb-2 overflow-hidden">
                     <ProductImage src={product.image} alt={product.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="object-contain p-2" />
                   </div>

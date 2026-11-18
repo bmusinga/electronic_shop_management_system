@@ -27,7 +27,7 @@ const headingShadow =
 
 export default function BusinessInfo() {
   return (
-    <section className="bg-white pt-4 pb-16 dark:bg-slate-900">
+    <section className="bg-white pt-4 pb-16 dark:bg-[#0A1F44]">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
           <div>

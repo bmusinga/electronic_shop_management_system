@@ -193,14 +193,14 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh] bg-slate-50 dark:bg-slate-900 p-4 sm:p-6 lg:p-8">
+      <div className="flex items-center justify-center min-h-[60vh] bg-slate-50 dark:bg-[#0A1F44] p-4 sm:p-6 lg:p-8">
         <div className="w-10 h-10 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0A1F44] p-4 sm:p-6 lg:p-8">
       <div className="max-w-3xl mx-auto space-y-8">
         {/* Toast */}
         {toast && (

@@ -20,7 +20,7 @@
   --color-surface-light: #ffffff;
   --color-surface-dark: #15202a;
   --color-bg-light: #eef1f4;
-  --color-bg-dark: #0b1218;
+  --color-bg-dark: #0A1F44;
   --color-card-light: #ffffff;
   --color-card-dark: #15202a;
   --color-border-light: #d5dce2;
@@ -53,7 +53,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --page-bg: #0b1218;
+    --page-bg: #0A1F44;
     --card-bg: #15202a;
     --text: #eaf0f5;
     --muted-text: #9fb0be;
@@ -63,7 +63,7 @@
 }
 
 .dark {
-  --page-bg: #0b1218;
+  --page-bg: #0A1F44;
   --card-bg: #15202a;
   --text: #eaf0f5;
   --muted-text: #9fb0be;

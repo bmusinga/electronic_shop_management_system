@@ -99,13 +99,25 @@ export default function Navbar() {
               <form onSubmit={onSearch} className="w-full">
                 <div className="flex w-full min-[600px]:max-w-[520px]">
                   <label htmlFor="site-search" className="sr-only">Search products</label>
-                  <input
-                    id="site-search"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search phones, laptops, TVs, accessories"
-                    className="w-full h-10 rounded-l-lg rounded-r-none border border-r-0 border-white/20 bg-white px-3 text-sm text-[#14202a] placeholder:text-[#5b6b78] focus:outline-none focus:ring-2 focus:ring-[#ff7a1a]"
-                  />
+                  <div className="relative flex-1">
+                    <input
+                      id="site-search"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Search phones, laptops, TVs, accessories"
+                      className="w-full h-10 rounded-l-lg rounded-r-none border border-r-0 border-white/20 bg-white pl-3 pr-9 text-sm text-[#14202a] placeholder:text-[#5b6b78] focus:outline-none focus:ring-2 focus:ring-[#ff7a1a]"
+                    />
+                    {query && (
+                      <button
+                        type="button"
+                        onClick={() => setQuery("")}
+                        aria-label="Clear search"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-red-600 hover:text-red-800"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                   <button type="submit" className="h-10 rounded-r-lg rounded-l-none bg-[#ff7a1a] px-4 text-sm font-semibold text-white hover:bg-[#e66e15] flex items-center gap-2 shrink-0" aria-label="Search">
                     <Search className="w-4 h-4" />
                     <span className="hidden sm:inline">Search</span>
@@ -163,7 +175,7 @@ export default function Navbar() {
           </nav>
         </>
       )}
-      <nav className={`${dark ? "bg-[#0A1F44]" : "bg-[#1E3A8A]"} border-t border-white/10 hidden min-[600px]:block`} aria-label="Primary">
+      <nav className={`${dark ? "bg-[#0A1F44]" : "bg-[#1E3A8A]"} border-t border-white/10 border-b border-white/20 hidden min-[600px]:block`} aria-label="Primary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-center gap-1 overflow-x-auto no-scrollbar py-1 text-sm">
             {navLinks.map((link) => {
