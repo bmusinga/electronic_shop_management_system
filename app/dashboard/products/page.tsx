@@ -235,6 +235,26 @@ export default function DashboardProductsPage() {
       .finally(() => setUploading(false));
   }
 
+  function handleFormKeyDown(e: React.KeyboardEvent<HTMLFormElement>) {
+    if (e.key !== "Enter") return;
+    const target = e.target as HTMLElement;
+    if (target.tagName === "BUTTON") return;
+    if (target.tagName === "INPUT") {
+      const type = (target as HTMLInputElement).type;
+      if (["checkbox", "radio", "file", "submit", "button"].includes(type)) return;
+    }
+    e.preventDefault();
+    const focusable = Array.from(
+      e.currentTarget.querySelectorAll<HTMLElement>(
+        'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), button[type="submit"]:not([disabled])'
+      )
+    ).filter((el) => el.getClientRects().length > 0);
+    const index = focusable.indexOf(target);
+    if (index >= 0 && index < focusable.length - 1) {
+      focusable[index + 1].focus();
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setFormError("");
@@ -551,7 +571,7 @@ export default function DashboardProductsPage() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-1.5">
                   Name

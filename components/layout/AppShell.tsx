@@ -18,7 +18,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </Suspense>
       )}
       <div className="flex-1">{children}</div>
-      {!isDashboard && <Footer />}
+      {!isDashboard && pathname !== "/login" && <Footer />}
     </>
   );
 }
