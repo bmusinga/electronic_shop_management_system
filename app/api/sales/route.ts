@@ -5,7 +5,7 @@ import {
   requireNumber,
   requireString,
 } from "@/lib/api";
-import { listSales, recordSale } from "@/lib/firestore-admin";
+import { listSales, recordSale, recordSales } from "@/lib/firestore-admin";
 import { requireAdmin } from "@/lib/session";
 import type { SaleInput } from "@/lib/types";
 
@@ -16,6 +16,7 @@ interface SaleBody {
   productName?: unknown;
   quantity?: unknown;
   unitPrice?: unknown;
+  items?: unknown;
 }
 
 function parseSaleInput(body: SaleBody): SaleInput {
@@ -47,6 +48,14 @@ export async function POST(request: Request) {
     assertSameOrigin(request);
     await requireAdmin();
     const body = await readJson<SaleBody>(request);
+    if (Array.isArray(body.items)) {
+      const items = body.items.map((item) => parseSaleInput(item as SaleBody));
+      if (items.length === 0) {
+        return Response.json({ error: "No sale items provided." }, { status: 400 });
+      }
+      await recordSales(items);
+      return Response.json({ ok: true }, { status: 201 });
+    }
     const input = parseSaleInput(body);
     await recordSale(input.productId, input);
     return Response.json({ ok: true }, { status: 201 });

@@ -10,6 +10,7 @@ import {
   AlertCircle,
   Camera,
   ImageIcon,
+  Upload,
 } from "lucide-react";
 import ProductImage from "@/components/ui/ProductImage";
 import { useCollectionStream } from "@/hooks/useCollectionStream";
@@ -153,12 +154,14 @@ export default function DashboardProductsPage() {
   const [formError, setFormError] = useState("");
   const [uploading, setUploading] = useState(false);
   const [newCategory, setNewCategory] = useState("");
+  const [removedCategories, setRemovedCategories] = useState<string[]>([]);
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
 
   const loadError = streamError || actionError;
 
   const categoryOptions = Array.from(
     new Set([...categories, ...products.map((p) => p.category).filter(Boolean)])
-  );
+  ).filter((c) => !removedCategories.includes(c));
 
   const filteredProducts = products.filter((product) =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -176,6 +179,8 @@ export default function DashboardProductsPage() {
     setForm(emptyForm);
     setNewCategory("");
     setFormError("");
+    setRemovedCategories([]);
+    setCategoryToDelete(null);
     setIsModalOpen(true);
   }
 
@@ -194,6 +199,8 @@ export default function DashboardProductsPage() {
     });
     setNewCategory("");
     setFormError("");
+    setRemovedCategories([]);
+    setCategoryToDelete(null);
     setIsModalOpen(true);
   }
 
@@ -206,6 +213,8 @@ export default function DashboardProductsPage() {
     setForm(emptyForm);
     setNewCategory("");
     setFormError("");
+    setRemovedCategories([]);
+    setCategoryToDelete(null);
   }
 
   function removeFormImage() {
@@ -233,6 +242,24 @@ export default function DashboardProductsPage() {
         setFormError(err?.message || "Could not upload the image. Please try again.");
       })
       .finally(() => setUploading(false));
+  }
+
+  function confirmDeleteCategory() {
+    if (!categoryToDelete) return;
+    if (products.some((p) => p.category === categoryToDelete)) {
+      setFormError("Cannot delete a category that is in use by products.");
+      setCategoryToDelete(null);
+      return;
+    }
+    setRemovedCategories((prev) => [...prev, categoryToDelete]);
+    if (form.category === categoryToDelete) {
+      const remaining = categoryOptions.filter((c) => c !== categoryToDelete);
+      setForm((prev) => ({
+        ...prev,
+        category: remaining[0] || NEW_CATEGORY,
+      }));
+    }
+    setCategoryToDelete(null);
   }
 
   function handleFormKeyDown(e: React.KeyboardEvent<HTMLFormElement>) {
@@ -300,6 +327,8 @@ export default function DashboardProductsPage() {
       setIsModalOpen(false);
       setForm(emptyForm);
       setNewCategory("");
+      setRemovedCategories([]);
+      setCategoryToDelete(null);
     } catch (err) {
       setFormError(
         err instanceof Error ? err.message : "Could not save the product."
@@ -611,6 +640,7 @@ export default function DashboardProductsPage() {
                     step="0.01"
                     value={form.price}
                     onChange={(e) => setForm({ ...form, price: e.target.value })}
+                    onWheel={(e) => e.currentTarget.blur()}
                     className="no-spinner w-full px-3.5 py-2.5 sk-input rounded-xl text-sm text-text-primary-light dark:text-text-primary-dark placeholder-text-muted-light dark:placeholder-text-muted-dark"
                     placeholder="price"
                   />
@@ -626,6 +656,7 @@ export default function DashboardProductsPage() {
                     min="1"
                     value={form.stock}
                     onChange={(e) => setForm({ ...form, stock: e.target.value })}
+                    onWheel={(e) => e.currentTarget.blur()}
                     className="no-spinner w-full px-3.5 py-2.5 sk-input rounded-xl text-sm text-text-primary-light dark:text-text-primary-dark placeholder-text-muted-light dark:placeholder-text-muted-dark"
                     placeholder="stock"
                   />
@@ -635,19 +666,55 @@ export default function DashboardProductsPage() {
                   <label className="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-1.5">
                     Category
                   </label>
-                  <select
-                    required
-                    value={form.category}
-                    onChange={(e) => setForm({ ...form, category: e.target.value })}
-                    className="w-full px-3.5 py-2.5 sk-input rounded-xl text-sm text-text-primary-light dark:text-text-primary-dark focus:ring-2 focus:ring-primary"
-                  >
-                    <option value={NEW_CATEGORY}>Add New category</option>
-                    {categoryOptions.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center gap-2">
+                    <select
+                      required
+                      value={form.category}
+                      onChange={(e) => setForm({ ...form, category: e.target.value })}
+                      className="w-full min-w-0 px-3.5 py-2.5 sk-input rounded-xl text-sm text-text-primary-light dark:text-text-primary-dark focus:ring-2 focus:ring-primary"
+                    >
+                      <option value={NEW_CATEGORY}>Add New category</option>
+                      {categoryOptions.map((category) => (
+                        <option key={category} value={category}>
+                          {category}
+                        </option>
+                      ))}
+                    </select>
+                    {form.category !== NEW_CATEGORY && (
+                      <button
+                        type="button"
+                        onClick={() => setCategoryToDelete(form.category)}
+                        className="shrink-0 p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        title="Delete category"
+                        aria-label="Delete category"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                  {categoryToDelete && (
+                    <div className="mt-2 rounded-xl border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-900/20 p-3">
+                      <p className="text-sm text-text-primary-light dark:text-text-primary-dark">
+                        Are you sure you want to delete the category?
+                      </p>
+                      <div className="mt-2 flex items-center justify-end gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setCategoryToDelete(null)}
+                          className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark hover:underline"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={confirmDeleteCategory}
+                          className="text-sm font-medium text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   {form.category === NEW_CATEGORY && (
                     <input
                       type="text"
@@ -691,6 +758,7 @@ export default function DashboardProductsPage() {
                       onChange={(e) =>
                         setForm({ ...form, percentOff: e.target.value })
                       }
+                      onWheel={(e) => e.currentTarget.blur()}
                       className="no-spinner w-full px-3.5 py-2.5 sk-input rounded-xl text-sm text-text-primary-light dark:text-text-primary-dark placeholder-text-muted-light dark:placeholder-text-muted-dark"
                       placeholder="% off"
                     />
@@ -740,8 +808,8 @@ export default function DashboardProductsPage() {
                               htmlFor="product-image-upload"
                               className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 text-sm font-medium sk-btn rounded-lg"
                             >
-                              <ImageIcon className="w-4 h-4" />
-                              Upload from Device
+                              <Upload className="w-4 h-4" />
+                              Upload
                             </label>
                             <input
                               id="product-image-upload"

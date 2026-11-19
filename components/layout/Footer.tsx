@@ -13,12 +13,13 @@ const links = [
 export default function Footer() {
   const { dark } = useTheme();
   const headerBg = dark ? "bg-[#0A1F44]" : "bg-[#1E3A8A]";
+  const backToTopBg = dark ? "bg-[#1E3A8A]" : "bg-[#0A1F44]";
   return (
     <footer className="text-white">
       <button
         type="button"
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        className={`w-full ${headerBg} border-y border-white/20 hover:brightness-110 py-3 text-center text-sm font-medium transition-colors`}
+        className={`w-full ${backToTopBg} border-y border-white/20 hover:brightness-110 py-3 text-center text-sm font-medium transition-colors`}
       >
         Back to top
       </button>

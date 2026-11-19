@@ -1,16 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import {
   Package,
   ShoppingBag,
   AlertTriangle,
   XCircle,
-  PackageOpen,
+  ChevronDown,
   type LucideIcon,
 } from "lucide-react";
 import {
   BarChart,
   Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -99,6 +102,53 @@ function CategoryTooltip({ active, payload, label }: CategoryTooltipProps) {
   return null;
 }
 
+type RevenueRange = "today" | "lastTwoDays" | "week" | "month" | "lastMonth" | "custom";
+
+function dateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getRangeBounds(
+  range: RevenueRange,
+  customFrom: string,
+  customTo: string
+): { from: string; to: string } {
+  const now = new Date();
+
+  if (range === "today") {
+    const key = dateKey(now);
+    return { from: key, to: key };
+  }
+
+  if (range === "lastTwoDays") {
+    const start = new Date(now);
+    start.setDate(start.getDate() - 1);
+    return { from: dateKey(start), to: dateKey(now) };
+  }
+
+  if (range === "week") {
+    const start = new Date(now);
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+    return { from: dateKey(start), to: dateKey(now) };
+  }
+
+  if (range === "month") {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    return { from: dateKey(start), to: dateKey(now) };
+  }
+
+  if (range === "lastMonth") {
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const end = new Date(now.getFullYear(), now.getMonth(), 0);
+    return { from: dateKey(start), to: dateKey(end) };
+  }
+
+  return { from: customFrom, to: customTo };
+}
+
 export default function DashboardPage() {
   const {
     data: products,
@@ -109,6 +159,9 @@ export default function DashboardPage() {
     loading: salesLoading,
   } = useCollectionStream<Sale>("/api/sales/stream", "sales");
   const loading = productsLoading || salesLoading;
+  const [revenueRange, setRevenueRange] = useState<RevenueRange>("month");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
   const stats: Record<StatKey, number> = {
     total: products.length,
     inStock: products.filter((p) => getStockStatus(p.stock) === "In Stock").length,
@@ -124,6 +177,34 @@ export default function DashboardPage() {
     }, new Map<string, number>()),
     ([name, count]) => ({ name, count })
   );
+
+  const revenueByDate = Array.from(
+    sales.reduce((map, sale) => {
+      if (!sale.createdAt) return map;
+      const date = new Date(sale.createdAt);
+      if (Number.isNaN(date.getTime())) return map;
+      const key = dateKey(date);
+      map.set(key, (map.get(key) || 0) + (sale.total || 0));
+      return map;
+    }, new Map<string, number>()),
+    ([date, revenue]) => ({ date, revenue })
+  ).sort((a, b) => a.date.localeCompare(b.date));
+
+  const revenueBounds = getRangeBounds(revenueRange, customFrom, customTo);
+  const filteredRevenue = revenueByDate.filter(
+    (point) =>
+      (!revenueBounds.from || point.date >= revenueBounds.from) &&
+      (!revenueBounds.to || point.date <= revenueBounds.to)
+  );
+
+  const formatDateLabel = (value: string) => {
+    const [year, month, day] = value.split("-").map(Number);
+    if (!year || !month || !day) return value;
+    return new Date(year, month - 1, day).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+  };
 
   const today = new Date();
   const recentSales = sales
@@ -163,10 +244,7 @@ export default function DashboardPage() {
 
       {/* Products by Category Chart */}
       <div className="sk-panel p-6">
-        <div className="flex items-center gap-2 mb-6">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full sk-icon">
-            <PackageOpen className="h-5 w-5 text-slate-400" />
-          </span>
+        <div className="mb-6">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
             Products by Category
           </h2>
@@ -207,6 +285,88 @@ export default function DashboardPage() {
                 ))}
               </Bar>
             </BarChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+
+      {/* Revenue Trend Chart */}
+      <div className="sk-panel p-6">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+            Revenue Trend
+          </h2>
+          <div className="relative">
+            <select
+              aria-label="Revenue trend period"
+              value={revenueRange}
+              onChange={(event) => setRevenueRange(event.target.value as RevenueRange)}
+              className="appearance-none rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark py-2 pl-3 pr-9 text-sm font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="today">Today</option>
+              <option value="lastTwoDays">Last Two Days</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="lastMonth">Last Month</option>
+              <option value="custom">Date Range</option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          </div>
+        </div>
+        {revenueRange === "custom" && (
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <input
+              type="date"
+              aria-label="From date"
+              value={customFrom}
+              onChange={(event) => setCustomFrom(event.target.value)}
+              className="rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 py-2 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <span className="text-sm text-slate-500 dark:text-slate-400">to</span>
+            <input
+              type="date"
+              aria-label="To date"
+              value={customTo}
+              onChange={(event) => setCustomTo(event.target.value)}
+              className="rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 py-2 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        )}
+        {filteredRevenue.length === 0 ? (
+          <p className="text-sm text-slate-500 dark:text-slate-400 py-10 text-center">
+            {loading
+              ? "Loading sales..."
+              : "No sales recorded for this period."}
+          </p>
+        ) : (
+          <ResponsiveContainer width="100%" height={350}>
+            <LineChart data={filteredRevenue}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+              <XAxis
+                dataKey="date"
+                tickFormatter={formatDateLabel}
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: "#94a3b8", fontSize: 12 }}
+              />
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: "#94a3b8", fontSize: 12 }}
+                tickFormatter={(v) => v.toLocaleString()}
+              />
+              <Tooltip
+                formatter={(value) => [Number(value).toLocaleString(), "Revenue"]}
+                labelFormatter={(label) => formatDateLabel(String(label))}
+              />
+              <Line
+                type="monotone"
+                dataKey="revenue"
+                stroke="#ff7a1a"
+                strokeWidth={3}
+                dot={{ r: 3 }}
+                activeDot={{ r: 5 }}
+              />
+            </LineChart>
           </ResponsiveContainer>
         )}
       </div>

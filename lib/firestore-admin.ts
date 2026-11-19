@@ -134,31 +134,61 @@ export async function recordSale(
   productId: string,
   saleData: SaleInput
 ): Promise<void> {
+  await recordSales([{ ...saleData, productId }]);
+}
+
+export async function recordSales(items: SaleInput[]): Promise<void> {
+  if (!items.length) {
+    throw new Error("No sale items provided.");
+  }
   const db = getAdminDb();
 
   await db.runTransaction(async (transaction) => {
-    const productRef = db.collection(PRODUCTS_COLLECTION).doc(productId);
-    const productSnap = await transaction.get(productRef);
-    if (!productSnap.exists) {
-      throw new Error("Could not find the selected product.");
-    }
-
-    const currentStock = (productSnap.data()?.stock as number) ?? 0;
-    if (saleData.quantity > currentStock) {
-      throw new Error(
-        `Not enough stock. Only ${currentStock} unit${
-          currentStock === 1 ? "" : "s"
-        } available.`
+    const requestedByProduct = new Map<string, number>();
+    for (const item of items) {
+      requestedByProduct.set(
+        item.productId,
+        (requestedByProduct.get(item.productId) || 0) + item.quantity
       );
     }
 
-    transaction.update(productRef, {
-      stock: FieldValue.increment(-saleData.quantity),
-      updatedAt: now(),
-    });
+    const productRefs = Array.from(requestedByProduct.keys()).map((id) =>
+      db.collection(PRODUCTS_COLLECTION).doc(id)
+    );
+    const productSnaps = await Promise.all(
+      productRefs.map((ref) => transaction.get(ref))
+    );
 
-    const saleRef = db.collection(SALES_COLLECTION).doc();
-    transaction.set(saleRef, { ...saleData, createdAt: now() });
+    for (let i = 0; i < productRefs.length; i++) {
+      const snap = productSnaps[i];
+      const productId = productRefs[i].id;
+      if (!snap.exists) {
+        throw new Error("Could not find the selected product.");
+      }
+      const currentStock = (snap.data()?.stock as number) ?? 0;
+      const requested = requestedByProduct.get(productId) || 0;
+      if (requested > currentStock) {
+        const name = (snap.data()?.name as string) || "product";
+        throw new Error(
+          `Not enough stock for ${name}. Only ${currentStock} unit${
+            currentStock === 1 ? "" : "s"
+          } available.`
+        );
+      }
+    }
+
+    for (const [productId, requested] of requestedByProduct.entries()) {
+      const ref = db.collection(PRODUCTS_COLLECTION).doc(productId);
+      transaction.update(ref, {
+        stock: FieldValue.increment(-requested),
+        updatedAt: now(),
+      });
+    }
+
+    for (const item of items) {
+      const saleRef = db.collection(SALES_COLLECTION).doc();
+      transaction.set(saleRef, { ...item, createdAt: now() });
+    }
   });
 }
 

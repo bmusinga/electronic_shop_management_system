@@ -36,6 +36,17 @@ function formatMoney(value: number): string {
   });
 }
 
+type SaleLine = {
+  id: string;
+  productId: string;
+  quantity: string;
+  unitPrice: string;
+};
+
+function createLine(): SaleLine {
+  return { id: Math.random().toString(36).slice(2), productId: "", quantity: "1", unitPrice: "" };
+}
+
 export default function DashboardSalesPage() {
   const {
     data: products,
@@ -54,101 +65,171 @@ export default function DashboardSalesPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editingSaleId, setEditingSaleId] = useState<string | null>(null);
   const [formError, setFormError] = useState("");
-  const [productId, setProductId] = useState("");
-  const [quantity, setQuantity] = useState("1");
-  const [unitPrice, setUnitPrice] = useState("");
+  const [lines, setLines] = useState<SaleLine[]>([createLine()]);
 
   const loading = productsLoading || salesLoading;
   const loadError = productsError || salesError || actionError;
 
-  const selectedProduct = products.find((p) => p.id === productId) || null;
   const editingSale = sales.find((sale) => sale.id === editingSaleId) || null;
-  const availableStock = selectedProduct
-    ? selectedProduct.stock +
-      (editingSale?.productId === selectedProduct.id ? editingSale.quantity : 0)
-    : 0;
 
-  const quantityNum = Number(quantity);
-  const unitPriceNum = Number(unitPrice);
-  const total =
-    Number.isFinite(quantityNum) && Number.isFinite(unitPriceNum)
-      ? quantityNum * unitPriceNum
-      : 0;
+  function getProduct(id: string) {
+    return products.find((p) => p.id === id) || null;
+  }
+
+  function availableStockFor(productId: string, excludeLineId?: string) {
+    const product = getProduct(productId);
+    if (!product) return 0;
+    let base = product.stock;
+    if (editingSale && editingSale.productId === productId) base += editingSale.quantity;
+    if (!editingSaleId) {
+      const reserved = lines.reduce((sum, l) => {
+        if (l.id === excludeLineId || l.productId !== productId) return sum;
+        const q = Number(l.quantity);
+        return sum + (Number.isFinite(q) && q > 0 ? q : 0);
+      }, 0);
+      base -= reserved;
+    }
+    return Math.max(0, base);
+  }
+
+  const total = lines.reduce((sum, line) => {
+    const q = Number(line.quantity);
+    const p = Number(line.unitPrice);
+    if (Number.isFinite(q) && Number.isFinite(p)) return sum + q * p;
+    return sum;
+  }, 0);
 
   function openModal() {
     setEditingSaleId(null);
-    setProductId("");
-    setQuantity("1");
-    setUnitPrice("");
+    setLines([createLine()]);
     setFormError("");
     setIsModalOpen(true);
   }
 
   function openEditModal(sale: Sale) {
     setEditingSaleId(sale.id);
-    setProductId(sale.productId);
-    setQuantity(String(sale.quantity));
-    setUnitPrice(String(sale.unitPrice));
+    setLines([{ id: sale.id, productId: sale.productId, quantity: String(sale.quantity), unitPrice: String(sale.unitPrice) }]);
     setFormError("");
     setIsModalOpen(true);
   }
 
-  function handleProductChange(id: string) {
-    setProductId(id);
-    const product = products.find((p) => p.id === id);
-    if (product) {
-      setUnitPrice(String(product.price));
-      setQuantity("1");
-    }
+  function updateLine(id: string, patch: Partial<SaleLine>) {
+    setLines((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));
     setFormError("");
+  }
+
+  function handleProductChange(id: string, productId: string) {
+    const product = getProduct(productId);
+    updateLine(id, {
+      productId,
+      unitPrice: product ? String(product.price) : "",
+      quantity: "1",
+    });
+  }
+
+  function addLine() {
+    setLines((prev) => [...prev, createLine()]);
+  }
+
+  function removeLine(id: string) {
+    setLines((prev) => (prev.length <= 1 ? prev : prev.filter((l) => l.id !== id)));
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setFormError("");
-    if (!selectedProduct) {
-      setFormError("Please select a product.");
-      return;
-    }
-    if (!Number.isInteger(quantityNum) || quantityNum <= 0) {
-      setFormError("Quantity must be a whole number greater than zero.");
-      return;
-    }
-    if (!Number.isFinite(unitPriceNum) || unitPriceNum <= 0) {
-      setFormError("Please enter a valid unit price.");
-      return;
-    }
-    if (quantityNum > availableStock) {
-      setFormError(
-        `Only ${availableStock} unit${availableStock === 1 ? "" : "s"} of ${selectedProduct.name} are in stock.`
-      );
-      return;
-    }
-    setSaving(true);
-    setActionError("");
-    try {
-      await apiFetch<{ ok: boolean }>(
-        editingSaleId ? `/api/sales/${editingSaleId}` : "/api/sales",
-        {
-          method: editingSaleId ? "PUT" : "POST",
+    if (editingSaleId) {
+      const line = lines[0];
+      const selectedProduct = getProduct(line.productId);
+      if (!selectedProduct) {
+        setFormError("Please select a product.");
+        return;
+      }
+      const quantityNum = Number(line.quantity);
+      const unitPriceNum = Number(line.unitPrice);
+      if (!Number.isInteger(quantityNum) || quantityNum <= 0) {
+        setFormError("Quantity must be a whole number greater than zero.");
+        return;
+      }
+      if (!Number.isFinite(unitPriceNum) || unitPriceNum <= 0) {
+        setFormError("Please enter a valid unit price.");
+        return;
+      }
+      const availableStock = availableStockFor(line.productId, line.id);
+      if (quantityNum > availableStock) {
+        setFormError(
+          `Only ${availableStock} unit${availableStock === 1 ? "" : "s"} of ${selectedProduct.name} are in stock.`
+        );
+        return;
+      }
+      setSaving(true);
+      setActionError("");
+      try {
+        await apiFetch<{ ok: boolean }>(`/api/sales/${editingSaleId}`, {
+          method: "PUT",
           body: JSON.stringify({
             productId: selectedProduct.id,
             productName: selectedProduct.name,
             quantity: quantityNum,
             unitPrice: unitPriceNum,
           }),
-        }
-      );
+        });
+        setIsModalOpen(false);
+        setEditingSaleId(null);
+      } catch (err) {
+        setFormError(err instanceof Error ? err.message : "Could not update the sale.");
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
+    const items: { productId: string; productName: string; quantity: number; unitPrice: number }[] = [];
+    const requestedByProduct = new Map<string, number>();
+    for (const line of lines) {
+      const product = getProduct(line.productId);
+      if (!product) {
+        setFormError("Please select a product for each item.");
+        return;
+      }
+      const quantityNum = Number(line.quantity);
+      const unitPriceNum = Number(line.unitPrice);
+      if (!Number.isInteger(quantityNum) || quantityNum <= 0) {
+        setFormError("Quantity must be a whole number greater than zero.");
+        return;
+      }
+      if (!Number.isFinite(unitPriceNum) || unitPriceNum <= 0) {
+        setFormError("Please enter a valid unit price for each item.");
+        return;
+      }
+      requestedByProduct.set(product.id, (requestedByProduct.get(product.id) || 0) + quantityNum);
+      items.push({
+        productId: product.id,
+        productName: product.name,
+        quantity: quantityNum,
+        unitPrice: unitPriceNum,
+      });
+    }
+    for (const [pid, req] of requestedByProduct.entries()) {
+      const product = getProduct(pid)!;
+      if (req > product.stock) {
+        setFormError(
+          `Not enough stock for ${product.name}. Only ${product.stock} unit${product.stock === 1 ? "" : "s"} available.`
+        );
+        return;
+      }
+    }
+
+    setSaving(true);
+    setActionError("");
+    try {
+      await apiFetch<{ ok: boolean }>("/api/sales", {
+        method: "POST",
+        body: JSON.stringify({ items }),
+      });
       setIsModalOpen(false);
-      setEditingSaleId(null);
     } catch (err) {
-      setFormError(
-        err instanceof Error
-          ? err.message
-          : editingSaleId
-            ? "Could not update the sale."
-            : "Could not record the sale."
-      );
+      setFormError(err instanceof Error ? err.message : "Could not record the sale.");
     } finally {
       setSaving(false);
     }
@@ -378,7 +459,7 @@ export default function DashboardSalesPage() {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="sk-panel w-full max-w-md p-6">
+          <div className="sk-panel w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
                 {editingSaleId ? "Edit Sale" : "Record a Sale"}
@@ -402,65 +483,101 @@ export default function DashboardSalesPage() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
-                    Product
-                  </label>
-                  <select
-                    value={productId}
-                    onChange={(e) => handleProductChange(e.target.value)}
-                    className="w-full px-3 py-2.5 sk-input rounded-lg text-sm text-text-primary-light dark:text-text-primary-dark"
+                <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1">
+                  {lines.map((line, idx) => {
+                    const product = getProduct(line.productId);
+                    const avail = availableStockFor(line.productId, line.id);
+                    return (
+                      <div key={line.id} className="space-y-3 rounded-lg border border-border-light dark:border-border-dark p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-medium text-text-muted-light dark:text-text-muted-dark">
+                            {editingSaleId ? "Product" : `Product ${idx + 1}`}
+                          </span>
+                          {!editingSaleId && lines.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeLine(line.id)}
+                              className="text-xs text-red-600 hover:text-red-700 dark:text-red-400"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
+                            Product
+                          </label>
+                          <select
+                            value={line.productId}
+                            onChange={(e) => handleProductChange(line.id, e.target.value)}
+                            disabled={!!editingSaleId}
+                            className="w-full px-3 py-2.5 sk-input rounded-lg text-sm text-text-primary-light dark:text-text-primary-dark disabled:opacity-60"
+                          >
+                            <option value="">Select a product...</option>
+                            {products.map((p) => (
+                              <option
+                                key={p.id}
+                                value={p.id}
+                                disabled={
+                                  (p.stock <= 0 && p.id !== editingSale?.productId) ||
+                                  (!editingSaleId && lines.some((l) => l.id !== line.id && l.productId === p.id))
+                                }
+                              >
+                                {p.name} - {p.stock} in stock
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
+                              Quantity
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              step="1"
+                              value={line.quantity}
+                              onChange={(e) => updateLine(line.id, { quantity: e.target.value })}
+                              onWheel={(e) => e.currentTarget.blur()}
+                              className="no-spinner w-full px-3 py-2.5 sk-input rounded-lg text-sm text-text-primary-light dark:text-text-primary-dark"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
+                              Unit Price
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={line.unitPrice}
+                              onChange={(e) => updateLine(line.id, { unitPrice: e.target.value })}
+                              onWheel={(e) => e.currentTarget.blur()}
+                              className="no-spinner w-full px-3 py-2.5 sk-input rounded-lg text-sm text-text-primary-light dark:text-text-primary-dark"
+                            />
+                          </div>
+                        </div>
+                        {product && (
+                          <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                            <ShoppingCart className="w-4 h-4 text-[#2563EB]" />
+                            {avail} unit{avail === 1 ? "" : "s"} available in stock
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {!editingSaleId && (
+                  <button
+                    type="button"
+                    onClick={addLine}
+                    className="w-full px-3 py-2.5 rounded-lg text-sm font-medium sk-btn flex items-center justify-center gap-2"
                   >
-                    <option value="">Select a product...</option>
-                    {products.map((product) => (
-                      <option
-                        key={product.id}
-                        value={product.id}
-                        disabled={
-                          product.stock <= 0 && product.id !== editingSale?.productId
-                        }
-                      >
-                        {product.name} - {product.stock} in stock
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
-                      Quantity
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={quantity}
-                      onChange={(e) => setQuantity(e.target.value)}
-                      className="no-spinner w-full px-3 py-2.5 sk-input rounded-lg text-sm text-text-primary-light dark:text-text-primary-dark"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">
-                      Unit Price
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={unitPrice}
-                      onChange={(e) => setUnitPrice(e.target.value)}
-                      className="no-spinner w-full px-3 py-2.5 sk-input rounded-lg text-sm text-text-primary-light dark:text-text-primary-dark"
-                    />
-                  </div>
-                </div>
-
-                {selectedProduct && (
-                  <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                    <ShoppingCart className="w-4 h-4 text-[#2563EB]" />
-                    {availableStock} unit
-                    {availableStock === 1 ? "" : "s"} available in stock
-                  </div>
+                    <Plus className="w-4 h-4" />
+                    Add another product
+                  </button>
                 )}
 
                 <div className="flex items-center justify-between p-3 rounded-lg sk-panel-inset">

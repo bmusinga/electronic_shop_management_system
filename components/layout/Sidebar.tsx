@@ -3,15 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import { useTheme } from "@/hooks/useTheme";
 import {
   LayoutDashboard,
   Package,
   ShoppingCart,
   Settings,
   LogOut,
-  Sun,
-  Moon,
   Menu,
   X,
   type LucideIcon,
@@ -45,7 +42,6 @@ export default function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
   const { signOut } = useAuth();
-  const { dark, toggleTheme } = useTheme();
   const expanded = !collapsed || mobileOpen;
 
   const linkClass = (isActive: boolean) =>
@@ -119,15 +115,6 @@ export default function Sidebar({
       </nav>
 
       <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-border-light dark:border-border-dark shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-        <button
-          onClick={toggleTheme}
-          className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium sk-btn mb-2 ${
-            expanded ? "" : "justify-center"
-          }`}
-        >
-          {dark ? <Sun className="w-5 h-5 shrink-0" /> : <Moon className="w-5 h-5 shrink-0" />}
-          {expanded && <span>{dark ? "Light Mode" : "Dark Mode"}</span>}
-        </button>
         <button
           onClick={signOut}
           className="flex items-center justify-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-danger border border-red-300/60 dark:border-red-900/60 bg-gradient-to-b from-[#fff5f5] to-[#fee2e2] dark:from-[#2a1518] dark:to-[#1a0b0d] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_1px_2px_rgba(15,23,42,0.14)] hover:from-[#fff0f0] hover:to-[#fecaca] dark:hover:from-[#3a1c20] dark:hover:to-[#220d10] active:translate-y-px active:shadow-[inset_0_2px_5px_rgba(220,38,38,0.25)] transition-all duration-150"

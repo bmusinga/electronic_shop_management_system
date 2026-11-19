@@ -2,8 +2,9 @@
 
 import { useState, useEffect, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Sun, Moon } from "lucide-react";
 import Sidebar from "@/components/layout/Sidebar";
+import { useTheme } from "@/hooks/useTheme";
 
 const pageMeta: Record<
   string,
@@ -47,6 +48,7 @@ export default function DashboardShell({ children }: { children: ReactNode }) {
   const [isMobile, setIsMobile] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const pathname = usePathname();
+  const { dark, toggleTheme } = useTheme();
 
   useEffect(() => {
     const id: ReturnType<typeof setTimeout> = setTimeout(() => {
@@ -150,8 +152,19 @@ export default function DashboardShell({ children }: { children: ReactNode }) {
               </p>
             )}
           </div>
-          <div className="ml-auto hidden shrink-0 rounded-lg sk-panel-inset px-3 py-1.5 text-sm text-text-secondary-light dark:text-text-secondary-dark md:block">
-            {today}
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className={iconButton}
+              aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+              title={dark ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {dark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
+            <div className="hidden shrink-0 rounded-lg sk-panel-inset px-3 py-1.5 text-sm text-text-secondary-light dark:text-text-secondary-dark md:block">
+              {today}
+            </div>
           </div>
         </header>
         <main className="p-4 sm:p-6">{children}</main>

@@ -1,36 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  User,
-  Store,
-  Shield,
-  Save,
-  Eye,
-  EyeOff,
-  CheckCircle,
-  AlertCircle,
-} from "lucide-react";
+import { Shield, Save, Eye, EyeOff, CheckCircle, AlertCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { apiFetch } from "@/lib/client-api";
-import type { SettingsData } from "@/lib/types";
 
 interface Toast {
   kind: "success" | "error";
   message: string;
-}
-
-interface ProfileState {
-  fullName: string;
-  email: string;
-  phone: string;
-}
-
-interface StoreState {
-  storeName: string;
-  description: string;
-  contactEmail: string;
-  contactPhone: string;
 }
 
 interface PasswordState {
@@ -40,26 +16,10 @@ interface PasswordState {
 }
 
 export default function SettingsPage() {
-  const { user, changePassword } = useAuth();
+  const { changePassword } = useAuth();
 
-  const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<Toast | null>(null);
-  const [savingProfile, setSavingProfile] = useState(false);
-  const [savingStore, setSavingStore] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
-
-  const [profile, setProfile] = useState<ProfileState>({
-    fullName: "",
-    email: "",
-    phone: "",
-  });
-
-  const [store, setStore] = useState<StoreState>({
-    storeName: "",
-    description: "",
-    contactEmail: "",
-    contactPhone: "",
-  });
 
   const [passwords, setPasswords] = useState<PasswordState>({
     current: "",
@@ -72,39 +32,6 @@ export default function SettingsPage() {
   const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
-    let active = true;
-    apiFetch<SettingsData>("/api/settings", { cache: "no-store" })
-      .then((data) => {
-        if (!active) return;
-        if (data) {
-          setProfile({
-            fullName: data.fullName || "",
-            email: data.email || user?.email || "",
-            phone: data.phone || "",
-          });
-          setStore({
-            storeName: data.storeName || "",
-            description: data.description || "",
-            contactEmail: data.contactEmail || "",
-            contactPhone: data.contactPhone || "",
-          });
-        } else {
-          setProfile((prev) => ({ ...prev, email: user?.email || "" }));
-        }
-        setLoading(false);
-      })
-      .catch(() => {
-        if (active) {
-          setProfile((prev) => ({ ...prev, email: user?.email || "" }));
-          setLoading(false);
-        }
-      });
-    return () => {
-      active = false;
-    };
-  }, [user?.email]);
-
-  useEffect(() => {
     if (!toast) return;
     const timer: ReturnType<typeof setTimeout> = setTimeout(
       () => setToast(null),
@@ -115,53 +42,6 @@ export default function SettingsPage() {
 
   const flash = (kind: Toast["kind"], message: string) =>
     setToast({ kind, message });
-
-  async function handleSaveProfile() {
-    setSavingProfile(true);
-    try {
-      const data: SettingsData = {
-        fullName: profile.fullName.trim(),
-        email: profile.email.trim(),
-        phone: profile.phone.trim(),
-      };
-      await apiFetch<{ ok: boolean }>("/api/settings", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
-      flash("success", "Profile saved successfully");
-    } catch (err) {
-      flash(
-        "error",
-        err instanceof Error ? err.message : "Could not save profile."
-      );
-    } finally {
-      setSavingProfile(false);
-    }
-  }
-
-  async function handleSaveStore() {
-    setSavingStore(true);
-    try {
-      const data: SettingsData = {
-        storeName: store.storeName.trim(),
-        description: store.description.trim(),
-        contactEmail: store.contactEmail.trim(),
-        contactPhone: store.contactPhone.trim(),
-      };
-      await apiFetch<{ ok: boolean }>("/api/settings", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
-      flash("success", "Store settings saved successfully");
-    } catch (err) {
-      flash(
-        "error",
-        err instanceof Error ? err.message : "Could not save store settings."
-      );
-    } finally {
-      setSavingStore(false);
-    }
-  }
 
   async function handleChangePassword() {
     if (passwords.new !== passwords.confirm) {
@@ -191,18 +71,9 @@ export default function SettingsPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh] bg-slate-50 dark:bg-[#0A1F44] p-4 sm:p-6 lg:p-8">
-        <div className="w-10 h-10 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0A1F44] p-4 sm:p-6 lg:p-8">
       <div className="max-w-3xl mx-auto space-y-8">
-        {/* Toast */}
         {toast && (
           <div
             className={`fixed top-6 right-6 z-50 flex items-center gap-2 rounded-lg border px-4 py-3 shadow-sm ${
@@ -228,157 +99,6 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* Section A: Profile Settings */}
-        <div className="rounded-xl sk-panel p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg sk-icon bg-blue-50 dark:bg-blue-900/30">
-              <User className="h-5 w-5 text-primary" />
-            </div>
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-              Profile Settings
-            </h2>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Full Name
-              </label>
-              <input
-                type="text"
-                value={profile.fullName}
-                onChange={(e) =>
-                  setProfile({ ...profile, fullName: e.target.value })
-                }
-                className="w-full rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 sk-input"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Email Address
-              </label>
-              <input
-                type="email"
-                value={profile.email}
-                disabled
-                className="w-full cursor-not-allowed rounded-xl px-4 py-2.5 text-sm text-slate-400 dark:text-slate-500 opacity-60 sk-input"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Phone Number
-              </label>
-              <input
-                type="tel"
-                value={profile.phone}
-                onChange={(e) =>
-                  setProfile({ ...profile, phone: e.target.value })
-                }
-                className="w-full rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 sk-input"
-              />
-            </div>
-          </div>
-
-          <div className="mt-6">
-            <button
-              onClick={handleSaveProfile}
-              disabled={savingProfile}
-              className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium sk-btn-primary"
-            >
-              <Save className="h-4 w-4" />
-              {savingProfile ? "Saving..." : "Save Changes"}
-            </button>
-          </div>
-        </div>
-
-        {/* Section B: Store Settings */}
-        <div className="rounded-xl sk-panel p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg sk-icon bg-blue-50 dark:bg-blue-900/30">
-              <Store className="h-5 w-5 text-primary" />
-            </div>
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-              Store Settings
-            </h2>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Store Name
-              </label>
-              <input
-                type="text"
-                value={store.storeName}
-                onChange={(e) =>
-                  setStore({ ...store, storeName: e.target.value })
-                }
-                placeholder="My Store"
-                className="w-full rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 sk-input"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Store Description
-              </label>
-              <textarea
-                rows={4}
-                value={store.description}
-                onChange={(e) =>
-                  setStore({ ...store, description: e.target.value })
-                }
-                placeholder="Tell customers about your store"
-                className="w-full rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 sk-input resize-none"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Contact Email
-              </label>
-              <input
-                type="email"
-                value={store.contactEmail}
-                onChange={(e) =>
-                  setStore({ ...store, contactEmail: e.target.value })
-                }
-                placeholder="support@example.com"
-                className="w-full rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 sk-input"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Contact Phone
-              </label>
-              <input
-                type="tel"
-                value={store.contactPhone}
-                onChange={(e) =>
-                  setStore({ ...store, contactPhone: e.target.value })
-                }
-                placeholder="+1 (555) 000-0000"
-                className="w-full rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 sk-input"
-              />
-            </div>
-          </div>
-
-          <div className="mt-6">
-            <button
-              onClick={handleSaveStore}
-              disabled={savingStore}
-              className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium sk-btn-primary"
-            >
-              <Save className="h-4 w-4" />
-              {savingStore ? "Saving..." : "Save Changes"}
-            </button>
-          </div>
-        </div>
-
-        {/* Section C: Security */}
         <div className="rounded-xl sk-panel p-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg sk-icon bg-blue-50 dark:bg-blue-900/30">
