@@ -1,69 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/client-api";
-import type { CategoryCardGroup, Product } from "@/lib/types";
+import { PRODUCT_CATEGORIES, type Product } from "@/lib/types";
 
-const DEFAULT_CARDS: CategoryCardGroup[] = [
-  {
-    title: "Phones & tablets",
-    link: "/products?category=Phones",
-    color: "#dbe7f6",
-    tiles: [
-      { label: "Smartphones", category: "Phones", image: "", emoji: "📱" },
-      { label: "Tablets", category: "Tablets", image: "", emoji: "📲" },
-      { label: "Earbuds", category: "Accessories", image: "", emoji: "🎧" },
-      { label: "Watches", category: "Accessories", image: "", emoji: "⌚" },
-    ],
-  },
-  {
-    title: "Computers",
-    link: "/products?category=Laptops",
-    color: "#e7ddf5",
-    tiles: [
-      { label: "Laptops", category: "Laptops", image: "", emoji: "💻" },
-      { label: "Desktops", category: "Desktops", image: "", emoji: "🖥️" },
-      { label: "Keyboards", category: "Accessories", image: "", emoji: "⌨️" },
-      { label: "Printers", category: "Accessories", image: "", emoji: "🖨️" },
-    ],
-  },
-  {
-    title: "TV & audio",
-    link: "/products?category=TV%20%26%20Audio",
-    color: "#fbe3d3",
-    tiles: [
-      { label: "Smart TVs", category: "TV & Audio", image: "", emoji: "📺" },
-      { label: "Speakers", category: "TV & Audio", image: "", emoji: "🔊" },
-      { label: "Mics", category: "Accessories", image: "", emoji: "🎤" },
-      { label: "Decoders", category: "TV & Audio", image: "", emoji: "📡" },
-    ],
-  },
-  {
-    title: "Power & accessories",
-    link: "/products?category=Accessories",
-    color: "#d9efe3",
-    tiles: [
-      { label: "Power banks", category: "Accessories", image: "", emoji: "🔋" },
-      { label: "Chargers", category: "Accessories", image: "", emoji: "🔌" },
-      { label: "Storage", category: "Accessories", image: "", emoji: "💾" },
-      { label: "Cameras", category: "Cameras", image: "", emoji: "📷" },
-    ],
-  },
-];
-
-function categoryFromLink(link: string): string {
-  try {
-    const url = new URL(link, "http://localhost");
-    return url.searchParams.get("category") || "";
-  } catch {
-    return "";
-  }
-}
-
-function cardCategory(card: CategoryCardGroup): string {
-  return categoryFromLink(card.link) || card.tiles.find((t) => t.category)?.category || card.title;
-}
+const CARD_COLORS = ["#dbe7f6", "#e7ddf5", "#fbe3d3", "#d9efe3", "#f6dbe6"];
+const CATEGORY_EMOJIS = ["📱", "💻", "🎧", "⌚", "🎮"];
 
 function productsForCategory(category: string, products: Product[]): Product[] {
   const key = category.toLowerCase().trim();
@@ -88,18 +31,18 @@ function shuffle<T>(items: T[]): T[] {
   return result;
 }
 
+function imageSet(matches: Product[], random = false): Product[] {
+  const source = random ? shuffle(matches) : matches;
+  if (!source.length) return [];
+  return Array.from({ length: 4 }, (_, index) => source[index % source.length]);
+}
+
 export default function CategoryTiles() {
-  const [cards, setCards] = useState<CategoryCardGroup[]>(DEFAULT_CARDS);
   const [products, setProducts] = useState<Product[]>([]);
-  const [selected, setSelected] = useState<Record<number, Product[]>>({});
+  const [selected, setSelected] = useState<Record<string, Product[]>>({});
 
   useEffect(() => {
     let active = true;
-    apiFetch<{ cards: CategoryCardGroup[] }>("/api/category-cards", { cache: "no-store" })
-      .then((d) => {
-        if (active && d?.cards?.length) setCards(d.cards);
-      })
-      .catch(() => {});
     apiFetch<Product[]>("/api/products", { cache: "no-store" })
       .then((items) => {
         if (active) setProducts(items || []);
@@ -110,37 +53,40 @@ export default function CategoryTiles() {
     };
   }, []);
 
+  const categories = useMemo(() => {
+    const fromProducts = products
+      .map((p) => (p.category || "").trim())
+      .filter(Boolean);
+    return Array.from(new Set([...PRODUCT_CATEGORIES, ...fromProducts]));
+  }, [products]);
+
   useEffect(() => {
     const update = () => {
-      const next: Record<number, Product[]> = {};
-      cards.forEach((card, index) => {
-        const matches = productsForCategory(cardCategory(card), products);
-        if (matches.length > 4) {
-          next[index] = shuffle(matches).slice(0, 4);
-        }
+      const next: Record<string, Product[]> = {};
+      categories.forEach((category) => {
+        const matches = productsForCategory(category, products);
+        if (matches.length) next[category] = imageSet(matches, true);
       });
       setSelected(next);
     };
     update();
-    const id = window.setInterval(update, 60000);
+    const id = window.setInterval(update, 30000);
     return () => window.clearInterval(id);
-  }, [cards, products]);
+  }, [categories, products]);
 
   return (
     <section className="bg-[#eef1f4] dark:bg-[#0A1F44]" style={{ padding: "14px 16px", overflowX: "clip" }}>
       <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" style={{ gap: 8 }}>
-        {cards.map((card, cardIndex) => {
-          const category = cardCategory(card);
-          const title = category || card.title;
-          const href = category
-            ? `/products?category=${encodeURIComponent(category)}`
-            : card.link || "/products";
+        {categories.map((category, categoryIndex) => {
           const matches = productsForCategory(category, products);
-          const shown = selected[cardIndex] || matches.slice(0, 4);
+          const shown = selected[category] || imageSet(matches);
+          const color = CARD_COLORS[categoryIndex % CARD_COLORS.length];
+          const emoji = CATEGORY_EMOJIS[categoryIndex % CATEGORY_EMOJIS.length];
+          const href = `/products?category=${encodeURIComponent(category)}`;
 
           return (
             <div
-              key={`${card.title}-${cardIndex}`}
+              key={category}
               className="bg-white dark:bg-[#0A1F44] border border-[#d5dce2] dark:border-[#2a3a47] rounded-[12px]"
               style={{ padding: 12 }}
             >
@@ -149,7 +95,7 @@ export default function CategoryTiles() {
                 className="flex items-start justify-between gap-2 mb-3 group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff7a1a] rounded"
               >
                 <span className="font-bold text-[21px] leading-tight text-[#14202a] dark:text-[#eaf0f5] line-clamp-2">
-                  {title}
+                  {category}
                 </span>
                 <span aria-hidden="true" className="text-[#14202a] dark:text-[#eaf0f5] text-lg leading-none mt-0.5">
                   &gt;
@@ -158,18 +104,17 @@ export default function CategoryTiles() {
               <div className="grid grid-cols-2" style={{ columnGap: 10, rowGap: 18 }}>
                 {Array.from({ length: 4 }).map((_, tileIndex) => {
                   const product = shown[tileIndex];
-                  const fallback = card.tiles[tileIndex];
-                  const label = product?.name || fallback?.label || category;
-                  const image = product?.image || fallback?.image || "";
+                  const label = product?.name || category;
+                  const image = product?.image || "";
                   return (
                     <Link
-                      key={product?.id || `${cardIndex}-${tileIndex}`}
+                      key={`${category}-${tileIndex}-${product?.id || "empty"}`}
                       href={href}
                       className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff7a1a] rounded-lg border border-[#d5dce2] dark:border-[#2a3a47] p-1.5"
                     >
                       <div
                         className="relative w-full overflow-hidden rounded-lg flex items-center justify-center"
-                        style={{ aspectRatio: "1 / 1", backgroundColor: card.color }}
+                        style={{ aspectRatio: "1 / 1", backgroundColor: color }}
                       >
                         <div className="relative z-[1] w-full h-full flex items-center justify-center" style={{ padding: "8%" }}>
                           {image ? (
@@ -180,7 +125,7 @@ export default function CategoryTiles() {
                             />
                           ) : (
                             <span className="text-[64px] leading-none" aria-hidden="true">
-                              {fallback?.emoji || "🛍️"}
+                              {emoji}
                             </span>
                           )}
                         </div>

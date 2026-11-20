@@ -35,18 +35,21 @@ const iconButton =
 const COLLAPSED_KEY = "eshop:dashboard-sidebar-collapsed";
 const MOBILE_OPEN_KEY = "eshop:dashboard-sidebar-mobile-open";
 
-const today = new Date().toLocaleDateString("en-US", {
-  weekday: "long",
-  year: "numeric",
-  month: "long",
-  day: "numeric",
-});
+function formatToday(): string {
+  return new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
 
 export default function DashboardShell({ children }: { children: ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [today, setToday] = useState("");
   const pathname = usePathname();
   const { dark, toggleTheme } = useTheme();
 
@@ -56,6 +59,7 @@ export default function DashboardShell({ children }: { children: ReactNode }) {
         setSidebarCollapsed(window.localStorage.getItem(COLLAPSED_KEY) === "true");
         setMobileOpen(window.localStorage.getItem(MOBILE_OPEN_KEY) === "true");
       } catch {}
+      setToday(formatToday());
       setHydrated(true);
     }, 0);
     return () => clearTimeout(id);

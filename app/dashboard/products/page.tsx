@@ -16,9 +16,9 @@ import ProductImage from "@/components/ui/ProductImage";
 import { useCollectionStream } from "@/hooks/useCollectionStream";
 import { apiFetch } from "@/lib/client-api";
 import { getStockStatus, type StockStatus } from "@/lib/stock";
-import type { Product, ProductFormValues, ProductInput } from "@/lib/types";
+import { PRODUCT_CATEGORIES, type Product, type ProductFormValues, type ProductInput } from "@/lib/types";
 
-const categories = ["Smartphones", "Laptops", "Audio", "Accessories", "Wearables"];
+const categories = PRODUCT_CATEGORIES;
 const NEW_CATEGORY = "__new__";
 
 const MAX_IMAGE_DIMENSION = 1200;

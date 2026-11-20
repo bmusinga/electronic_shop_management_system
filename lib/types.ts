@@ -1,3 +1,11 @@
+export const PRODUCT_CATEGORIES = [
+  "Smartphones",
+  "Laptops",
+  "Audio",
+  "Accessories",
+  "Wearables",
+];
+
 export interface Product {
   id: string;
   name: string;
