@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, type ReactNode } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Menu, X, Sun, Moon } from "lucide-react";
 import Sidebar from "@/components/layout/Sidebar";
+import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
 
 const pageMeta: Record<
@@ -51,7 +52,15 @@ export default function DashboardShell({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
   const [today, setToday] = useState("");
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const { dark, toggleTheme } = useTheme();
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace("/login");
+    }
+  }, [authLoading, user, router]);
 
   useEffect(() => {
     const id: ReturnType<typeof setTimeout> = setTimeout(() => {
@@ -105,6 +114,8 @@ export default function DashboardShell({ children }: { children: ReactNode }) {
       setSidebarCollapsed((collapsed) => !collapsed);
     }
   };
+
+  if (authLoading || !user) return null;
 
   const meta = pageMeta[pathname] ?? { title: "Dashboard", subtitle: "" };
   const mobileToggleClass = mobileOpen
