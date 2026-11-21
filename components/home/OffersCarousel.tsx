@@ -14,7 +14,7 @@ export default function OffersCarousel({ initialProducts = [] }: { initialProduc
   const cards = products.map((p, i) => ({
     id: p.id,
     category: p.category || "Featured",
-    name: p.name,
+    name: p.name || p.description || "Item",
     description: p.description || p.name,
     image: p.image || "",
     price: p.price || 0,
@@ -42,12 +42,15 @@ export default function OffersCarousel({ initialProducts = [] }: { initialProduc
               <p className="text-right text-xs font-medium uppercase tracking-wide text-white/90 line-clamp-1">
                 {card.category}
               </p>
-              <p className="mt-2 text-[18px] font-bold leading-tight text-white line-clamp-1">
+              <h2
+                className="mt-2 text-[20px] leading-tight font-bold line-clamp-2"
+                style={{ color: "#ffffff" }}
+              >
                 {card.name}
-              </p>
-              <h2 className="mt-1 pb-2 text-[24px] leading-[1.3] font-bold line-clamp-2">
-                {card.description}
               </h2>
+              <p className="mt-1 pb-2 text-[16px] leading-snug text-white/90 line-clamp-2">
+                {card.description}
+              </p>
               <div className="h-[150px] shrink-0 flex items-center justify-center my-2 overflow-hidden">
                 {card.image ? (
                   <img
