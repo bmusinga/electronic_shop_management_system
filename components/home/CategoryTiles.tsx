@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/client-api";
-import { PRODUCT_CATEGORIES, type Product } from "@/lib/types";
+import type { Product } from "@/lib/types";
 
 const CARD_COLORS = ["#dbe7f6", "#e7ddf5", "#fbe3d3", "#d9efe3", "#f6dbe6"];
 const CATEGORY_EMOJIS = ["📱", "💻", "🎧", "⌚", "🎮"];
@@ -55,9 +55,9 @@ export default function CategoryTiles() {
 
   const categories = useMemo(() => {
     const fromProducts = products
-      .map((p) => (p.category || "").trim())
-      .filter(Boolean);
-    return Array.from(new Set([...PRODUCT_CATEGORIES, ...fromProducts]));
+      .filter((p) => p.image && (p.category || "").trim())
+      .map((p) => (p.category || "").trim());
+    return Array.from(new Set(fromProducts));
   }, [products]);
 
   useEffect(() => {

@@ -5,8 +5,6 @@ import { useTheme } from "@/hooks/useTheme";
 
 const links = [
   { href: "/products", label: "All Products" },
-  { href: "/products?category=Phones", label: "Phones" },
-  { href: "/products?category=Laptops", label: "Laptops" },
   { href: "/about", label: "About" },
 ];
 
