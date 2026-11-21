@@ -1,14 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Package,
-  ShoppingBag,
-  AlertTriangle,
-  XCircle,
-  ChevronDown,
-  type LucideIcon,
-} from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -31,40 +24,14 @@ type StatKey = "total" | "inStock" | "lowStock" | "outOfStock";
 interface StatCard {
   key: StatKey;
   title: string;
-  icon: LucideIcon;
-  color: string;
-  iconColor: string;
+  titleColor: string;
 }
 
 const statCards: StatCard[] = [
-  {
-    key: "total",
-    title: "Total Products",
-    icon: Package,
-    color: "bg-blue-50 dark:bg-blue-900/20",
-    iconColor: "text-blue-600 dark:text-blue-400",
-  },
-  {
-    key: "inStock",
-    title: "In Stock",
-    icon: ShoppingBag,
-    color: "bg-emerald-50 dark:bg-emerald-900/20",
-    iconColor: "text-emerald-600 dark:text-emerald-400",
-  },
-  {
-    key: "lowStock",
-    title: "Low Stock",
-    icon: AlertTriangle,
-    color: "bg-amber-50 dark:bg-amber-900/20",
-    iconColor: "text-amber-600 dark:text-amber-400",
-  },
-  {
-    key: "outOfStock",
-    title: "Out of Stock",
-    icon: XCircle,
-    color: "bg-red-50 dark:bg-red-900/20",
-    iconColor: "text-red-600 dark:text-red-400",
-  },
+  { key: "total", title: "Total Products", titleColor: "text-blue-600 dark:text-blue-400" },
+  { key: "inStock", title: "In Stock", titleColor: "text-green-600 dark:text-green-400" },
+  { key: "lowStock", title: "Low Stock", titleColor: "text-orange-500 dark:text-orange-400" },
+  { key: "outOfStock", title: "Out of Stock", titleColor: "text-red-600 dark:text-red-400" },
 ];
 
 interface CategoryCount {
@@ -218,32 +185,24 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {statCards.map((stat) => {
-          const Icon = stat.icon;
           const value = stats[stat.key];
           return (
-            <div key={stat.key} className="sk-panel p-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                    {stat.title}
-                  </p>
-                  <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">
-                    {loading ? "..." : value.toLocaleString()}
-                  </p>
-                </div>
-                <div className={`sk-icon p-3 ${stat.color}`}>
-                  <Icon className={`h-5 w-5 ${stat.iconColor}`} />
-                </div>
-              </div>
+            <div key={stat.key} className="sk-panel p-4 sm:p-6">
+              <p className={`text-sm font-medium ${stat.titleColor}`}>
+                {stat.title}
+              </p>
+              <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
+                {loading ? "..." : value.toLocaleString()}
+              </p>
             </div>
           );
         })}
       </div>
 
       {/* Products by Category Chart */}
-      <div className="sk-panel p-6">
+      <div className="sk-panel p-6 pl-3 sm:pl-4">
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
             Products by Category
@@ -270,6 +229,7 @@ export default function DashboardPage() {
                 tick={{ fill: "#94a3b8", fontSize: 12 }}
               />
               <YAxis
+                width={42}
                 allowDecimals={false}
                 axisLine={false}
                 tickLine={false}
@@ -290,7 +250,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Revenue Trend Chart */}
-      <div className="sk-panel p-6">
+      <div className="sk-panel p-6 pl-3 sm:pl-4">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
             Revenue Trend
@@ -349,6 +309,7 @@ export default function DashboardPage() {
                 tick={{ fill: "#94a3b8", fontSize: 12 }}
               />
               <YAxis
+                width={42}
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: "#94a3b8", fontSize: 12 }}
