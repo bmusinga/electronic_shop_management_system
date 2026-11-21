@@ -26,7 +26,7 @@ const pageMeta: Record<
   },
   "/dashboard/settings": {
     title: "Settings",
-    subtitle: "Manage your account and store preferences",
+    subtitle: "Manage your account",
   },
 };
 
