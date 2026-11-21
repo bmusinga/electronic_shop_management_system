@@ -394,26 +394,55 @@ export default function DashboardProductsPage() {
       )}
 
       {deleteTarget && (
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/40 rounded-xl px-4 py-3 mb-4">
-          <div className="flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-danger shrink-0" />
-            <p className="text-sm text-red-700 dark:text-red-400">
-              Delete {deleteTarget.name}? This action cannot be undone.
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-4"
+          onClick={() => setDeleteId(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-product-title"
+            className="sk-panel w-full max-w-md p-5"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-danger shrink-0" />
+                <h2
+                  id="delete-product-title"
+                  className="text-base font-semibold text-[#14202a] dark:text-[#eaf0f5]"
+                >
+                  Delete product
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeleteId(null)}
+                aria-label="Close"
+                className="p-1 rounded-lg text-[#5b6b78] dark:text-[#9fb0be] hover:bg-[#eef1f4] dark:hover:bg-[#0b1218]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="mt-3 text-sm text-[#5b6b78] dark:text-[#9fb0be]">
+              Delete <span className="font-semibold text-[#14202a] dark:text-[#eaf0f5]">{deleteTarget.name}</span>? This action cannot be undone.
             </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setDeleteId(null)}
-              className="px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleDelete}
-              className="px-3 py-1.5 text-sm font-medium bg-danger text-white rounded-lg hover:bg-red-700 transition-colors"
-            >
-              Delete
-            </button>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteId(null)}
+                className="px-4 py-2 text-sm font-medium rounded-lg border border-[#d5dce2] dark:border-[#2a3a47] text-[#14202a] dark:text-[#eaf0f5] hover:bg-[#eef1f4] dark:hover:bg-[#0b1218]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="px-4 py-2 text-sm font-medium bg-danger text-white rounded-lg hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

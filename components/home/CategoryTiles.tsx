@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/client-api";
 import type { Product } from "@/lib/types";
@@ -113,8 +113,8 @@ export default function CategoryTiles() {
                       className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff7a1a] rounded-lg border border-[#d5dce2] dark:border-[#2a3a47] p-1.5"
                     >
                       <div
-                        className="relative w-full overflow-hidden rounded-lg flex items-center justify-center"
-                        style={{ aspectRatio: "1 / 1", backgroundColor: color }}
+                        className="relative w-full overflow-hidden rounded-lg flex items-center justify-center bg-[var(--tile-bg)] dark:bg-[#15202a]"
+                        style={{ aspectRatio: "1 / 1", "--tile-bg": color } as CSSProperties}
                       >
                         <div className="relative z-[1] w-full h-full flex items-center justify-center" style={{ padding: "8%" }}>
                           {image ? (

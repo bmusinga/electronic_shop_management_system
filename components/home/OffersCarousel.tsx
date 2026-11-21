@@ -51,12 +51,12 @@ export default function OffersCarousel({ initialProducts = [] }: { initialProduc
               <p className="mt-1 pb-2 text-[16px] leading-snug text-white/90 line-clamp-2">
                 {card.description}
               </p>
-              <div className="h-[150px] shrink-0 flex items-center justify-center my-2 overflow-hidden">
+              <div className="flex-1 min-h-0 flex items-center justify-center my-2 overflow-hidden">
                 {card.image ? (
                   <img
                     src={card.image}
                     alt={card.description}
-                    className="h-[150px] w-full object-cover drop-shadow-md"
+                    className="max-h-full w-full object-contain drop-shadow-md"
                   />
                 ) : (
                   <div className="w-28 h-28 rounded-xl bg-white/15 flex items-center justify-center text-white/80 text-sm">
@@ -64,7 +64,7 @@ export default function OffersCarousel({ initialProducts = [] }: { initialProduc
                   </div>
                 )}
               </div>
-              <div className="mt-auto">
+              <div>
                 <p className="text-[24px] leading-tight font-bold tracking-tight text-[#ff7a1a] [text-shadow:0_2px_6px_rgba(0,0,0,0.85),0_1px_2px_rgba(0,0,0,0.9)]">Hurry while stocks last...</p>
                 <p className="text-right text-[24px] leading-tight font-semibold">From {formatKes(card.price)}</p>
               </div>
