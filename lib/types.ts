@@ -96,3 +96,39 @@ export type CategoryCardGroup = {
 };
 
 export type SettingsData = Record<string, string>;
+
+export interface StoreInfo {
+  storeName: string;
+  contactPhone: string;
+  contactEmail: string;
+  whatsapp: string;
+  address: string;
+}
+
+export const REPAIR_STATUSES = [
+  "Booked",
+  "Diagnosing",
+  "In progress",
+  "Ready",
+  "Completed",
+  "Cancelled",
+] as const;
+
+export type RepairStatus = (typeof REPAIR_STATUSES)[number];
+
+export interface RepairBookingInput {
+  name: string;
+  phone: string;
+  model: string;
+  problem: string;
+  notes: string;
+  preferredDate: string;
+}
+
+export interface RepairBooking extends RepairBookingInput {
+  id: string;
+  reference: string;
+  status: RepairStatus;
+  createdAt: string;
+  updatedAt: string;
+}

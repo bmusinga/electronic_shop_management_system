@@ -2,25 +2,37 @@ import { createHmac, timingSafeEqual } from "crypto";
 
 export const SESSION_COOKIE = "voltex_session";
 export const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+const DEV_SECRET = "dev-only-session-secret-not-for-production";
 
 export interface AuthUser {
   uid: string;
   email?: string;
 }
 
+export interface SessionIdentity extends AuthUser {
+  version: number;
+}
+
 interface SessionPayload {
   uid: string;
   email?: string;
+  version: number;
   exp: number;
 }
 
 function getSessionSecret(): string {
-  return (
-    process.env.SESSION_SECRET ||
-    process.env.FIREBASE_API_KEY ||
-    process.env.NEXT_PUBLIC_FIREBASE_API_KEY ||
-    "dev-session-secret-change-me"
-  );
+  const secret = process.env.SESSION_SECRET;
+  if (secret && secret.length >= 32) {
+    return secret;
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "SESSION_SECRET must be set to at least 32 characters in production."
+    );
+  }
+
+  return DEV_SECRET;
 }
 
 function toBase64Url(value: string): string {
@@ -35,17 +47,21 @@ function sign(data: string): string {
   return createHmac("sha256", getSessionSecret()).update(data).digest("base64url");
 }
 
-export function createSessionToken(user: AuthUser): string {
+export function createSessionToken(
+  user: AuthUser,
+  version: number
+): string {
   const payload: SessionPayload = {
     uid: user.uid,
     email: user.email || "",
+    version,
     exp: Date.now() + SESSION_TTL_MS,
   };
   const body = toBase64Url(JSON.stringify(payload));
   return `${body}.${sign(body)}`;
 }
 
-export function verifySessionToken(token: string): AuthUser | null {
+export function verifySessionToken(token: string): SessionIdentity | null {
   const [body, sig] = token.split(".");
   if (!body || !sig) return null;
 
@@ -56,8 +72,20 @@ export function verifySessionToken(token: string): AuthUser | null {
 
   try {
     const payload = JSON.parse(fromBase64Url(body)) as SessionPayload;
-    if (!payload?.uid || !payload?.exp || payload.exp <= Date.now()) return null;
-    return { uid: payload.uid, email: payload.email || undefined };
+    if (
+      !payload?.uid ||
+      !payload?.exp ||
+      payload.exp <= Date.now() ||
+      !Number.isInteger(payload.version) ||
+      payload.version < 0
+    ) {
+      return null;
+    }
+    return {
+      uid: payload.uid,
+      email: payload.email || undefined,
+      version: payload.version,
+    };
   } catch {
     return null;
   }

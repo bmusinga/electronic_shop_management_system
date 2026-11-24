@@ -2,14 +2,19 @@
 
 import Link from "next/link";
 import { useTheme } from "@/hooks/useTheme";
+import { useStoreInfo } from "@/hooks/useStoreInfo";
+import { normalizeKenyanPhone } from "@/lib/phone";
 
 const links = [
   { href: "/products", label: "All Products" },
+  { href: "/repairs", label: "Repairs" },
   { href: "/about", label: "About" },
 ];
 
 export default function Footer() {
   const { dark } = useTheme();
+  const storeInfo = useStoreInfo();
+  const phone = normalizeKenyanPhone(storeInfo.contactPhone);
   const headerBg = dark ? "bg-[#0A1F44]" : "bg-[#1E3A8A]";
   const backToTopBg = dark ? "bg-[#1E3A8A]" : "bg-[#0A1F44]";
   return (
@@ -30,13 +35,22 @@ export default function Footer() {
           ))}
         </nav>
         <p className="mt-4 text-xs text-gray-300">
-          Juja Farm, Kenya <span className="mx-2">|</span>
-          <a href="tel:+254700000000" className="hover:underline">07XX XXX XXX</a>
-          <span className="mx-2">|</span>
-          <a href="mailto:hello@eshop.co.ke" className="hover:underline">hello@eshop.co.ke</a>
+          {storeInfo.address || "Juja Farm, Kenya"}
+          {storeInfo.contactPhone && (
+            <>
+              <span className="mx-2">|</span>
+              <a href={`tel:+${phone || storeInfo.contactPhone.replace(/[^\d]/g, "")}`} className="hover:underline">{storeInfo.contactPhone}</a>
+            </>
+          )}
+          {storeInfo.contactEmail && (
+            <>
+              <span className="mx-2">|</span>
+              <a href={`mailto:${storeInfo.contactEmail}`} className="hover:underline">{storeInfo.contactEmail}</a>
+            </>
+          )}
         </p>
         <p className="mt-6 text-xs text-gray-300">
-          &copy; {new Date().getFullYear()} EShop, Juja Farm. All rights reserved.
+          &copy; {new Date().getFullYear()} {storeInfo.storeName}. All rights reserved.
         </p>
       </div>
     </footer>

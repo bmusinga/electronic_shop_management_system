@@ -10,6 +10,9 @@ import type {
   ContactMessageInput,
   Product,
   ProductInput,
+  RepairBooking,
+  RepairBookingInput,
+  RepairStatus,
   Sale,
   SaleInput,
   SettingsData,
@@ -18,7 +21,11 @@ import type {
 const PRODUCTS_COLLECTION = "products";
 const MESSAGES_COLLECTION = "messages";
 const SALES_COLLECTION = "sales";
+const REPAIRS_COLLECTION = "repairs";
+const SESSION_VERSIONS_COLLECTION = "sessionVersions";
 const SETTINGS_DOC = "settings/admin";
+const OWNER_DOC = "settings/owner";
+const REPAIR_COUNTER_DOC = "counters/repairs";
 
 function now(): string {
   return new Date().toISOString();
@@ -295,4 +302,107 @@ export async function saveSettings(data: SettingsData): Promise<void> {
   await getAdminDb()
     .doc(SETTINGS_DOC)
     .set({ ...data, updatedAt: now() }, { merge: true });
+}
+
+export async function getSessionVersion(uid: string): Promise<number> {
+  const snapshot = await getAdminDb()
+    .doc(`${SESSION_VERSIONS_COLLECTION}/${uid}`)
+    .get();
+  const version = snapshot.data()?.version;
+  return typeof version === "number" && Number.isInteger(version) && version >= 0
+    ? version
+    : 0;
+}
+
+export async function bumpSessionVersion(uid: string): Promise<number> {
+  const db = getAdminDb();
+  const ref = db.doc(`${SESSION_VERSIONS_COLLECTION}/${uid}`);
+  return db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    const current = snapshot.data()?.version;
+    const next =
+      typeof current === "number" && Number.isInteger(current) && current >= 0
+        ? current + 1
+        : 1;
+    transaction.set(ref, { version: next, updatedAt: now() });
+    return next;
+  });
+}
+
+export async function getOwnerUid(): Promise<string | null> {
+  const snapshot = await getAdminDb().doc(OWNER_DOC).get();
+  const uid = snapshot.data()?.uid;
+  return typeof uid === "string" && uid ? uid : null;
+}
+
+export async function claimOwnerUid(uid: string): Promise<string> {
+  const db = getAdminDb();
+  const ref = db.doc(OWNER_DOC);
+  return db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    const existing = snapshot.data()?.uid;
+    if (typeof existing === "string" && existing) {
+      return existing;
+    }
+    transaction.set(ref, { uid, createdAt: now() });
+    return uid;
+  });
+}
+
+export async function createRepairBooking(
+  input: RepairBookingInput
+): Promise<RepairBooking> {
+  const db = getAdminDb();
+  const counterRef = db.doc(REPAIR_COUNTER_DOC);
+  const ref = db.collection(REPAIRS_COLLECTION).doc();
+
+  return db.runTransaction(async (transaction) => {
+    const counter = await transaction.get(counterRef);
+    const raw = counter.data()?.value;
+    const current =
+      typeof raw === "number" && Number.isInteger(raw) && raw >= 0 ? raw : 0;
+    const next = current + 1;
+    transaction.set(counterRef, { value: next });
+
+    const booking: RepairBooking = {
+      id: ref.id,
+      reference: `R-${String(next).padStart(4, "0")}`,
+      ...input,
+      status: "Booked",
+      createdAt: now(),
+      updatedAt: now(),
+    };
+    transaction.set(ref, booking);
+    return booking;
+  });
+}
+
+export async function getRepairBooking(
+  reference: string
+): Promise<RepairBooking | null> {
+  const snapshot = await getAdminDb()
+    .collection(REPAIRS_COLLECTION)
+    .where("reference", "==", reference)
+    .limit(1)
+    .get();
+  return snapshot.empty ? null : mapDoc<RepairBooking>(snapshot.docs[0]);
+}
+
+export async function listRepairBookings(): Promise<RepairBooking[]> {
+  const snapshot = await getAdminDb()
+    .collection(REPAIRS_COLLECTION)
+    .orderBy("createdAt", "desc")
+    .limit(200)
+    .get();
+  return snapshot.docs.map((doc) => mapDoc<RepairBooking>(doc));
+}
+
+export async function updateRepairStatus(
+  id: string,
+  status: RepairStatus
+): Promise<void> {
+  await getAdminDb()
+    .collection(REPAIRS_COLLECTION)
+    .doc(id)
+    .update({ status, updatedAt: now() });
 }

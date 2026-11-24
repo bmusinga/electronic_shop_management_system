@@ -3,30 +3,33 @@ import "server-only";
 import { AuthError } from "./session";
 
 export function jsonError(error: unknown, fallback = "Request failed."): Response {
-  if (error instanceof AuthError) {
+  if (error instanceof AuthError && error.status < 500) {
     return Response.json(
       { error: error.message, code: error.code },
       { status: error.status }
     );
   }
 
-  return Response.json(
-    { error: error instanceof Error ? error.message : fallback },
-    { status: 500 }
-  );
+  console.error("[api]", error);
+  return Response.json({ error: fallback }, { status: 500 });
 }
 
 export function assertSameOrigin(request: Request): void {
+  const method = request.method.toUpperCase();
+  if (method === "GET" || method === "HEAD" || method === "OPTIONS") {
+    return;
+  }
+
   const origin = request.headers.get("origin");
   if (!origin) {
-    return;
+    throw new AuthError(403, "Origin header is required.", "CSRF");
   }
 
   let expected: string;
   try {
     expected = new URL(request.url).origin;
   } catch {
-    return;
+    throw new AuthError(400, "Invalid request URL.");
   }
 
   if (origin !== expected) {

@@ -11,6 +11,7 @@ function ProductsContent() {
   const searchParams = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
   const [activeCategory, setActiveCategory] = useState(searchParams.get("category") || "All");
 
@@ -18,7 +19,11 @@ function ProductsContent() {
     let active = true;
     apiFetch<Product[]>("/api/products", { cache: "no-store" })
       .then((items) => { if (active) { setProducts(items); setLoading(false); } })
-      .catch(() => { if (active) setLoading(false); });
+      .catch((err: unknown) => {
+        if (!active) return;
+        setError(err instanceof Error ? err.message : "Could not load products.");
+        setLoading(false);
+      });
     return () => { active = false; };
   }, []);
 
@@ -39,6 +44,14 @@ function ProductsContent() {
   return (
     <main className="min-h-screen bg-[#eef1f4] dark:bg-[#0A1F44]">
       <section className="w-full px-2 sm:px-3 py-6">
+        <p className="mb-4 text-center text-sm text-[#5b6b78] dark:text-[#9fb0be]">
+          Browse our catalogue. Prices are indicative and purchases are handled in store.
+        </p>
+        {error && (
+          <p className="mx-auto mb-4 max-w-2xl rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+            {error}
+          </p>
+        )}
         {loading ? (
           <div className="flex items-center justify-center py-20"><div className="w-10 h-10 border-4 border-[#ff7a1a] border-t-transparent rounded-full animate-spin" /></div>
         ) : filteredProducts.length === 0 ? (
@@ -52,8 +65,8 @@ function ProductsContent() {
             {filteredProducts.map((product) => {
               return (
                 <div key={product.id} className="bg-white dark:bg-[#0A1F44] border border-[#d5dce2] dark:border-[#2a3a47] rounded-[10px] overflow-hidden hover:shadow-md transition-shadow">
-                  <div className="relative h-44 bg-[#f9fafb] dark:bg-[#0A1F44]">
-                    <ProductImage src={product.image} alt={product.name} fill sizes="(max-width: 640px) 100vw, 25vw" className="object-contain p-3" />
+                  <div className="relative h-[176px] bg-[#f9fafb] dark:bg-[#0A1F44]">
+                    <ProductImage src={product.image} alt={product.name} fill sizes="(max-width: 640px) 100vw, 25vw" className="object-contain" />
                   </div>
                   <div className="p-4 bg-white dark:bg-[#0A1F44] border-t border-[#d5dce2] dark:border-[#2a3a47]">
                     <div className="mb-2 flex items-start justify-between gap-2">

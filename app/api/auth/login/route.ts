@@ -1,5 +1,5 @@
 import { assertSameOrigin, jsonError, readJson, requireString } from "@/lib/api";
-import { AuthError, createSession } from "@/lib/session";
+import { AuthError, claimStoreOwner, createSession } from "@/lib/session";
 
 interface LoginBody {
   email?: unknown;
@@ -84,6 +84,14 @@ export async function POST(request: Request) {
 
     if (!response.ok || !data?.localId) {
       throw mapFirebaseError(data?.error?.message);
+    }
+
+    if (!(await claimStoreOwner(data.localId))) {
+      throw new AuthError(
+        403,
+        "This account is not the store owner.",
+        "NOT_OWNER"
+      );
     }
 
     const user = {

@@ -8,6 +8,12 @@ import {
   verifySessionToken,
   type AuthUser,
 } from "@/lib/session-token";
+import {
+  bumpSessionVersion,
+  claimOwnerUid,
+  getOwnerUid,
+  getSessionVersion,
+} from "@/lib/firestore-admin";
 
 export { SESSION_COOKIE } from "@/lib/session-token";
 export type { AuthUser } from "@/lib/session-token";
@@ -25,15 +31,15 @@ export class AuthError extends Error {
 }
 
 export async function createSession(user: AuthUser): Promise<void> {
-  const expiresAt = Date.now() + SESSION_TTL_MS;
-  const token = createSessionToken(user);
+  const version = await getSessionVersion(user.uid);
+  const token = createSessionToken(user, version);
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    expires: new Date(expiresAt),
+    expires: new Date(Date.now() + SESSION_TTL_MS),
   });
 }
 
@@ -46,7 +52,14 @@ export async function getSessionUser(): Promise<AuthUser | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (!token) return null;
-  return verifySessionToken(token);
+
+  const identity = verifySessionToken(token);
+  if (!identity) return null;
+
+  const version = await getSessionVersion(identity.uid);
+  if (version !== identity.version) return null;
+
+  return { uid: identity.uid, email: identity.email };
 }
 
 export async function requireAdmin(): Promise<AuthUser> {
@@ -54,11 +67,18 @@ export async function requireAdmin(): Promise<AuthUser> {
   if (!user) {
     throw new AuthError(401, "You must be signed in to do that.");
   }
+  if ((await getOwnerUid()) !== user.uid) {
+    throw new AuthError(403, "This account does not have access to the store.");
+  }
   return user;
 }
 
-export async function revokeUserSessions(_uid: string): Promise<void> {
-  // Stateless cookie sessions: revocation is handled by issuing a new session cookie.
+export async function claimStoreOwner(uid: string): Promise<boolean> {
+  return (await claimOwnerUid(uid)) === uid;
+}
+
+export async function revokeUserSessions(uid: string): Promise<void> {
+  await bumpSessionVersion(uid);
 }
 
 export function authErrorResponse(error: unknown): Response {

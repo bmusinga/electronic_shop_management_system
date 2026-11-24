@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Shield, Save, Eye, EyeOff, CheckCircle, AlertCircle } from "lucide-react";
+import { Shield, Save, Store, Eye, EyeOff, CheckCircle, AlertCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { apiFetch } from "@/lib/client-api";
+import type { StoreInfo } from "@/lib/types";
 
 interface Toast {
   kind: "success" | "error";
@@ -15,11 +17,21 @@ interface PasswordState {
   confirm: string;
 }
 
+const EMPTY_STORE: StoreInfo = {
+  storeName: "EShop",
+  contactPhone: "",
+  contactEmail: "",
+  whatsapp: "",
+  address: "",
+};
+
 export default function SettingsPage() {
   const { changePassword } = useAuth();
 
   const [toast, setToast] = useState<Toast | null>(null);
   const [savingPassword, setSavingPassword] = useState(false);
+  const [store, setStore] = useState<StoreInfo>(EMPTY_STORE);
+  const [savingStore, setSavingStore] = useState(false);
 
   const [passwords, setPasswords] = useState<PasswordState>({
     current: "",
@@ -40,16 +52,50 @@ export default function SettingsPage() {
     return () => clearTimeout(timer);
   }, [toast]);
 
+  useEffect(() => {
+    let active = true;
+    apiFetch<Partial<StoreInfo>>("/api/settings", { cache: "no-store" })
+      .then((data) => {
+        if (!active) return;
+        setStore({
+          storeName: data.storeName || EMPTY_STORE.storeName,
+          contactPhone: data.contactPhone || "",
+          contactEmail: data.contactEmail || "",
+          whatsapp: data.whatsapp || "",
+          address: data.address || "",
+        });
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const flash = (kind: Toast["kind"], message: string) =>
     setToast({ kind, message });
+
+  async function handleSaveStore() {
+    setSavingStore(true);
+    try {
+      await apiFetch("/api/settings", {
+        method: "POST",
+        body: JSON.stringify(store),
+      });
+      flash("success", "Store details saved");
+    } catch (err) {
+      flash("error", err instanceof Error ? err.message : "Could not save store details.");
+    } finally {
+      setSavingStore(false);
+    }
+  }
 
   async function handleChangePassword() {
     if (passwords.new !== passwords.confirm) {
       flash("error", "New password and confirmation do not match.");
       return;
     }
-    if (passwords.new.length < 6) {
-      flash("error", "New password must be at least 6 characters.");
+    if (passwords.new.length < 8) {
+      flash("error", "New password must be at least 8 characters.");
       return;
     }
     if (!passwords.current || !passwords.new) {
@@ -98,6 +144,50 @@ export default function SettingsPage() {
             </span>
           </div>
         )}
+
+        <div className="rounded-xl sk-panel p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg sk-icon bg-blue-50 dark:bg-blue-900/30">
+              <Store className="h-5 w-5 text-primary" />
+            </div>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+              Store details
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {([
+              ["storeName", "Store name"],
+              ["contactPhone", "Phone number"],
+              ["contactEmail", "Email address"],
+              ["whatsapp", "WhatsApp number"],
+              ["address", "Physical address"],
+            ] as const).map(([key, label]) => (
+              <div key={key}>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  {label}
+                </label>
+                <input
+                  value={store[key]}
+                  onChange={(event) => setStore({ ...store, [key]: event.target.value })}
+                  placeholder={label}
+                  className="w-full rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 sk-input"
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-6">
+            <button
+              onClick={() => void handleSaveStore()}
+              disabled={savingStore}
+              className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium sk-btn-primary disabled:opacity-60"
+            >
+              <Save className="h-4 w-4" />
+              {savingStore ? "Saving..." : "Save store details"}
+            </button>
+          </div>
+        </div>
 
         <div className="rounded-xl sk-panel p-6">
           <div className="flex items-center gap-3 mb-6">

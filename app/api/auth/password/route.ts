@@ -28,10 +28,10 @@ export async function POST(request: Request) {
       throw new AuthError(400, "Current password is required.");
     }
 
-    if (typeof body.newPassword !== "string" || body.newPassword.length < 6) {
+    if (typeof body.newPassword !== "string" || body.newPassword.length < 8) {
       throw new AuthError(
         400,
-        "New password must be at least 6 characters.",
+        "New password must be at least 8 characters.",
         "WEAK_PASSWORD"
       );
     }

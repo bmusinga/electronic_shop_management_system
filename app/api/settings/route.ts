@@ -13,6 +13,8 @@ const ALLOWED_KEYS = [
   "description",
   "contactEmail",
   "contactPhone",
+  "whatsapp",
+  "address",
   "categoryCards",
 ] as const;
 

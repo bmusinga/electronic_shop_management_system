@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Plus,
   Trash2,
@@ -20,6 +20,7 @@ import { PRODUCT_CATEGORIES, type Product, type ProductFormValues, type ProductI
 
 const categories = PRODUCT_CATEGORIES;
 const NEW_CATEGORY = "__new__";
+const REMOVED_CATEGORIES_KEY = "eshop:removed-categories";
 
 const MAX_IMAGE_DIMENSION = 1200;
 const IMAGE_QUALITY = 0.7;
@@ -155,7 +156,36 @@ export default function DashboardProductsPage() {
   const [uploading, setUploading] = useState(false);
   const [newCategory, setNewCategory] = useState("");
   const [removedCategories, setRemovedCategories] = useState<string[]>([]);
+  const [categoriesHydrated, setCategoriesHydrated] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      try {
+        const stored = window.localStorage.getItem(REMOVED_CATEGORIES_KEY);
+        if (stored) {
+          const parsed: unknown = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            setRemovedCategories(
+              parsed.filter((item): item is string => typeof item === "string")
+            );
+          }
+        }
+      } catch {}
+      setCategoriesHydrated(true);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!categoriesHydrated) return;
+    try {
+      window.localStorage.setItem(
+        REMOVED_CATEGORIES_KEY,
+        JSON.stringify(removedCategories)
+      );
+    } catch {}
+  }, [removedCategories, categoriesHydrated]);
 
   const loadError = streamError || actionError;
 
@@ -176,10 +206,9 @@ export default function DashboardProductsPage() {
   }
 
   function openAddModal() {
-    setForm(emptyForm);
+    setForm({ ...emptyForm, category: categoryOptions[0] || NEW_CATEGORY });
     setNewCategory("");
     setFormError("");
-    setRemovedCategories([]);
     setCategoryToDelete(null);
     setIsModalOpen(true);
   }
@@ -199,7 +228,6 @@ export default function DashboardProductsPage() {
     });
     setNewCategory("");
     setFormError("");
-    setRemovedCategories([]);
     setCategoryToDelete(null);
     setIsModalOpen(true);
   }
@@ -213,7 +241,6 @@ export default function DashboardProductsPage() {
     setForm(emptyForm);
     setNewCategory("");
     setFormError("");
-    setRemovedCategories([]);
     setCategoryToDelete(null);
   }
 
@@ -327,7 +354,6 @@ export default function DashboardProductsPage() {
       setIsModalOpen(false);
       setForm(emptyForm);
       setNewCategory("");
-      setRemovedCategories([]);
       setCategoryToDelete(null);
     } catch (err) {
       setFormError(
