@@ -10,6 +10,7 @@ import { apiFetch } from "@/lib/client-api";
 import { displayKenyanPhone, normalizeKenyanPhone } from "@/lib/phone";
 import type { Product } from "@/lib/types";
 
+const DEFAULT_PHONE = "0712345678";
 const baseLinks = [
   { href: "/", label: "All" },
   { href: "/products", label: "Today's Deals" },
@@ -18,8 +19,10 @@ const baseLinks = [
 export default function Navbar() {
   const { dark, toggleTheme } = useTheme();
   const storeInfo = useStoreInfo();
-  const shopPhone = normalizeKenyanPhone(storeInfo.contactPhone);
-  const shopPhoneLabel = shopPhone ? displayKenyanPhone(shopPhone) : "";
+  const shopPhone =
+    normalizeKenyanPhone(storeInfo.contactPhone) ||
+    normalizeKenyanPhone(DEFAULT_PHONE);
+  const shopPhoneLabel = shopPhone ? displayKenyanPhone(shopPhone) : DEFAULT_PHONE;
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -134,12 +137,10 @@ export default function Navbar() {
               <button onClick={toggleTheme} className="inline-flex items-center justify-center w-[30px] h-[30px] rounded-lg bg-white/10 hover:bg-white/20" aria-label="Toggle theme">
                 {dark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </button>
-              {shopPhone && (
-                <a href={`tel:+${shopPhone}`} className="inline-flex items-center h-[30px] rounded-lg overflow-hidden" aria-label={`Call ${shopPhoneLabel}`}>
-                  <img src="/icons/phone-icon.webp" alt="" aria-hidden="true" className="w-[30px] h-[30px] object-cover shrink-0" />
-                  <span className="hidden min-[600px]:inline pl-2 text-[24px] font-bold leading-tight tracking-tight text-white whitespace-nowrap">{shopPhoneLabel}</span>
-                </a>
-              )}
+              <a href={`tel:+${shopPhone || DEFAULT_PHONE.replace(/\D/g, "")}`} className="inline-flex items-center h-[30px] rounded-lg overflow-hidden" aria-label={`Call ${shopPhoneLabel}`}>
+                <img src="/icons/phone-icon.webp" alt="" aria-hidden="true" className="w-[30px] h-[30px] object-cover shrink-0" />
+                <span className="hidden min-[600px]:inline pl-2 text-[24px] font-bold leading-tight tracking-tight text-white whitespace-nowrap">{shopPhoneLabel}</span>
+              </a>
             </div>
           </div>
         </div>
