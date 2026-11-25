@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { apiFetch } from "@/lib/client-api";
 import { Eye, EyeOff, ArrowLeft, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
@@ -14,7 +15,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [signingIn, setSigningIn] = useState(false);
+  const [sendingReset, setSendingReset] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -32,6 +35,34 @@ export default function LoginPage() {
       );
     } finally {
       setSigningIn(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    setError("");
+    setNotice("");
+
+    if (!email.trim()) {
+      setError("Enter your email above to reset your password.");
+      document.getElementById("email")?.focus();
+      return;
+    }
+
+    setSendingReset(true);
+    try {
+      await apiFetch<{ ok: boolean }>("/api/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+      setNotice(
+        "If that email has an account, a password reset link has been sent. Check your inbox."
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Could not send the reset email."
+      );
+    } finally {
+      setSendingReset(false);
     }
   };
 
@@ -105,7 +136,23 @@ export default function LoginPage() {
                 )}
               </button>
             </div>
+            <div className="mt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => void handleForgotPassword()}
+                disabled={sendingReset}
+                className="text-sm text-slate-500 hover:text-slate-700 hover:underline dark:text-slate-400 dark:hover:text-slate-200 disabled:opacity-60"
+              >
+                {sendingReset ? "Sending..." : "Forgot password?"}
+              </button>
+            </div>
           </div>
+
+          {notice && (
+            <p className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300">
+              {notice}
+            </p>
+          )}
 
           {error && (
             <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
@@ -128,7 +175,7 @@ export default function LoginPage() {
         <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
           <Link
             href="/"
-            className="flex items-center justify-center gap-2 text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+            className="flex items-center justify-center gap-2 text-sm text-slate-500 hover:text-slate-700 hover:underline dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Store

@@ -44,9 +44,6 @@ function ProductsContent() {
   return (
     <main className="min-h-screen bg-[#eef1f4] dark:bg-[#0A1F44]">
       <section className="w-full px-2 sm:px-3 py-6">
-        <p className="mb-4 text-center text-sm text-[#5b6b78] dark:text-[#9fb0be]">
-          Browse our catalogue. Prices are indicative and purchases are handled in store.
-        </p>
         {error && (
           <p className="mx-auto mb-4 max-w-2xl rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
             {error}
