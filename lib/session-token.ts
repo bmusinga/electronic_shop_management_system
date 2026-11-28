@@ -1,4 +1,5 @@
-import { createHmac, timingSafeEqual } from "crypto";
+import { createHash, createHmac, timingSafeEqual } from "crypto";
+import { getServiceAccountPrivateKey } from "./service-account-env.ts";
 
 export const SESSION_COOKIE = "voltex_session";
 export const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
@@ -20,15 +21,31 @@ interface SessionPayload {
   exp: number;
 }
 
+function derivedSessionSecret(): string {
+  const privateKey = getServiceAccountPrivateKey();
+  if (!privateKey) return "";
+  return createHash("sha256")
+    .update(`voltex-session:${privateKey}`)
+    .digest("hex");
+}
+
+function configuredSessionSecret(): string {
+  const secret = process.env.SESSION_SECRET?.trim();
+  if (secret && secret.length >= 32) return secret;
+  return derivedSessionSecret();
+}
+
+export function hasSessionSecret(): boolean {
+  return Boolean(configuredSessionSecret());
+}
+
 function getSessionSecret(): string {
-  const secret = process.env.SESSION_SECRET;
-  if (secret && secret.length >= 32) {
-    return secret;
-  }
+  const secret = configuredSessionSecret();
+  if (secret) return secret;
 
   if (process.env.NODE_ENV === "production") {
     throw new Error(
-      "SESSION_SECRET must be set to at least 32 characters in production."
+      "SESSION_SECRET must be at least 32 characters in production, or a Firebase service account must be configured."
     );
   }
 

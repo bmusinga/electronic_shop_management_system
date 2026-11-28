@@ -2,6 +2,13 @@ import "server-only";
 
 import { AuthError } from "./session";
 
+function isServerConfigError(error: unknown): error is Error {
+  if (!(error instanceof Error)) return false;
+  return /(?:not configured|not valid JSON|missing project_id|SESSION_SECRET|FIREBASE_API_KEY|WEBAUTHN_ORIGIN)/i.test(
+    error.message
+  );
+}
+
 export function jsonError(
   error: unknown,
   fallback = "Something went wrong. Please try again."
@@ -13,8 +20,19 @@ export function jsonError(
     );
   }
 
+  if (isServerConfigError(error)) {
+    console.error("[config]", error.message);
+    return Response.json(
+      { error: error.message, code: "SERVER_CONFIG" },
+      { status: 500 }
+    );
+  }
+
   console.error("[api]", error);
-  return Response.json({ error: fallback }, { status: 500 });
+  return Response.json(
+    { error: fallback, code: "SERVER_ERROR" },
+    { status: 500 }
+  );
 }
 
 export function assertSameOrigin(request: Request): void {

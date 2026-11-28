@@ -1,4 +1,5 @@
 import { assertSameOrigin, jsonError, readJson, requireString } from "@/lib/api";
+import { getAdminApp } from "@/lib/firebase-admin";
 import { getOwnerUid } from "@/lib/firestore-admin";
 import {
   clearLoginFailures,
@@ -46,6 +47,17 @@ function mapFirebaseError(message?: string): AuthError {
 
   if (code.includes("USER_DISABLED")) {
     return new AuthError(403, "This account has been disabled.", "USER_DISABLED");
+  }
+
+  if (
+    code.includes("API_KEY_HTTP_REFERRER_BLOCKED") ||
+    code.includes("API_KEY_INVALID")
+  ) {
+    return new AuthError(
+      500,
+      "Firebase API key is not authorized for this domain. Check Firebase authorized domains and API key restrictions.",
+      "FIREBASE_KEY_BLOCKED"
+    );
   }
 
   return new AuthError(401, "Invalid email or password.", "INVALID_CREDENTIALS");
@@ -114,6 +126,8 @@ export async function POST(request: Request) {
         "MISSING_FIREBASE_KEY"
       );
     }
+
+    getAdminApp();
 
     const ip = clientKey(request);
     await enforceLoginRateLimit(email, ip);

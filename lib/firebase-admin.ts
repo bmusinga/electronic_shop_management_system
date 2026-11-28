@@ -3,33 +3,17 @@ import "server-only";
 import { cert, getApps, initializeApp, type App } from "firebase-admin/app";
 import { getAuth, type Auth } from "firebase-admin/auth";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
+import {
+  hasServiceAccountEnv,
+  readServiceAccountEnv,
+} from "./service-account-env.ts";
 
-interface ServiceAccountJson {
-  project_id?: string;
-  client_email?: string;
-  private_key?: string;
-}
+export { hasServiceAccountEnv } from "./service-account-env.ts";
 
 let app: App | null = null;
 
 function readServiceAccount() {
-  const encoded = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
-  if (!encoded) {
-    throw new Error(
-      "FIREBASE_SERVICE_ACCOUNT_BASE64 is not configured. Add the base64-encoded Firebase service account JSON to the server environment."
-    );
-  }
-
-  let parsed: ServiceAccountJson;
-  try {
-    parsed = JSON.parse(Buffer.from(encoded, "base64").toString("utf8")) as ServiceAccountJson;
-  } catch {
-    try {
-      parsed = JSON.parse(encoded) as ServiceAccountJson;
-    } catch {
-      throw new Error("FIREBASE_SERVICE_ACCOUNT_BASE64 is not valid base64-encoded JSON.");
-    }
-  }
+  const { parsed } = readServiceAccountEnv();
 
   const projectId = parsed.project_id || process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
   if (!projectId || !parsed.client_email || !parsed.private_key) {
