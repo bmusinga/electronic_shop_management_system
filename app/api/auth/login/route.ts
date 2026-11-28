@@ -1,4 +1,5 @@
 import { assertSameOrigin, jsonError, readJson, requireString } from "@/lib/api";
+import { getOwnerUid } from "@/lib/firestore-admin";
 import {
   clearLoginFailures,
   enforceLoginRateLimit,
@@ -6,6 +7,8 @@ import {
 } from "@/lib/login-rate-limit";
 import { clientKey } from "@/lib/rate-limit";
 import { AuthError, claimStoreOwner, createSession } from "@/lib/session";
+
+const IDENTITY_TOOLKIT_TIMEOUT_MS = 30_000;
 
 interface LoginBody {
   email?: unknown;
@@ -68,7 +71,7 @@ async function signInWithPassword(
           returnSecureToken: true,
         }),
         cache: "no-store",
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(IDENTITY_TOOLKIT_TIMEOUT_MS),
       });
 
       if (response.status < 500 || attempt === 1) {
@@ -77,8 +80,9 @@ async function signInWithPassword(
           | null;
         return { response, data };
       }
-    } catch {
+    } catch (error) {
       if (attempt === 1) {
+        console.error("[login] identity toolkit unavailable", error);
         break;
       }
     }
@@ -127,7 +131,15 @@ export async function POST(request: Request) {
 
     await clearLoginFailures(email, ip);
 
-    if (!(await claimStoreOwner(data.localId))) {
+    let isOwner: boolean;
+    try {
+      isOwner = await claimStoreOwner(data.localId);
+    } catch (error) {
+      console.error("[login] owner claim failed", error);
+      isOwner = (await getOwnerUid()) === data.localId;
+    }
+
+    if (!isOwner) {
       throw new AuthError(
         403,
         "This account is not the store owner.",
@@ -145,7 +157,7 @@ export async function POST(request: Request) {
   } catch (error) {
     return jsonError(
       error,
-      "Sign-in is temporarily unavailable. Please try again."
+      "Sign-in could not be completed. Please try again."
     );
   }
 }
