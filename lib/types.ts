@@ -132,3 +132,70 @@ export interface RepairBooking extends RepairBookingInput {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface LoginAttemptRecord {
+  failures: number;
+  firstFailureAt: number;
+  expiresAt: number;
+  updatedAt: number;
+}
+
+export interface WebAuthnChallengeRecord {
+  challenge: string;
+  type: "registration" | "authentication";
+  uid?: string;
+  expiresAt: number;
+}
+
+export interface WebAuthnCredentialRecord {
+  credentialId: string;
+  uid: string;
+  publicKeyJwk: JsonWebKey;
+  alg: number;
+  signCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SerializedPublicKeyCredential {
+  id: string;
+  rawId: string;
+  type: string;
+  response: {
+    clientDataJSON: string;
+    authenticatorData?: string;
+    signature?: string;
+    userHandle?: string | null;
+    attestationObject?: string;
+  };
+}
+
+export interface PublicKeyCredentialDescriptorJSON {
+  type: "public-key";
+  id: string;
+  transports?: string[];
+}
+
+export interface PublicKeyCredentialCreationOptionsJSON {
+  challenge: string;
+  rp: { name: string; id: string };
+  user: { id: string; name: string; displayName: string };
+  pubKeyCredParams: { type: "public-key"; alg: number }[];
+  timeout?: number;
+  attestation?: "none" | "indirect" | "direct" | "enterprise";
+  authenticatorSelection?: {
+    authenticatorAttachment?: "platform" | "cross-platform";
+    residentKey?: "discouraged" | "preferred" | "required";
+    requireResidentKey?: boolean;
+    userVerification?: "discouraged" | "preferred" | "required";
+  };
+  excludeCredentials?: PublicKeyCredentialDescriptorJSON[];
+}
+
+export interface PublicKeyCredentialRequestOptionsJSON {
+  challenge: string;
+  rpId: string;
+  allowCredentials?: PublicKeyCredentialDescriptorJSON[];
+  userVerification?: "discouraged" | "preferred" | "required";
+  timeout?: number;
+}

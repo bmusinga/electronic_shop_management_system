@@ -1,9 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Shield, Save, Store, Eye, EyeOff, CheckCircle, AlertCircle } from "lucide-react";
+import {
+  Shield,
+  Save,
+  Store,
+  Eye,
+  EyeOff,
+  CheckCircle,
+  AlertCircle,
+  Fingerprint,
+} from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { apiFetch } from "@/lib/client-api";
+import {
+  enrollFingerprint,
+  isFingerprintAvailable,
+} from "@/lib/webauthn-client";
 import type { StoreInfo } from "@/lib/types";
 
 interface Toast {
@@ -30,6 +43,9 @@ export default function SettingsPage() {
 
   const [toast, setToast] = useState<Toast | null>(null);
   const [savingPassword, setSavingPassword] = useState(false);
+  const [enrollingFingerprint, setEnrollingFingerprint] = useState(false);
+  const [fingerprintAvailable, setFingerprintAvailable] = useState(false);
+  const [fingerprintEnrolled, setFingerprintEnrolled] = useState(false);
   const [store, setStore] = useState<StoreInfo>(EMPTY_STORE);
   const [savingStore, setSavingStore] = useState(false);
 
@@ -64,6 +80,23 @@ export default function SettingsPage() {
           whatsapp: data.whatsapp || "",
           address: data.address || "",
         });
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    isFingerprintAvailable().then((available) => {
+      if (active) setFingerprintAvailable(available);
+    });
+    apiFetch<{ enrolled: boolean }>("/api/auth/passkey/status", {
+      cache: "no-store",
+    })
+      .then((data) => {
+        if (active) setFingerprintEnrolled(data.enrolled);
       })
       .catch(() => {});
     return () => {
@@ -114,6 +147,22 @@ export default function SettingsPage() {
       );
     } finally {
       setSavingPassword(false);
+    }
+  }
+
+  async function handleEnrollFingerprint() {
+    setEnrollingFingerprint(true);
+    try {
+      await enrollFingerprint();
+      setFingerprintEnrolled(true);
+      flash("success", "Fingerprint enrolled successfully");
+    } catch (err) {
+      flash(
+        "error",
+        err instanceof Error ? err.message : "Could not enroll fingerprint."
+      );
+    } finally {
+      setEnrollingFingerprint(false);
     }
   }
 
@@ -294,6 +343,41 @@ export default function SettingsPage() {
               <Save className="h-4 w-4" />
               {savingPassword ? "Updating..." : "Update Password"}
             </button>
+          </div>
+
+          <div className="mt-6 border-t border-slate-200 dark:border-slate-700 pt-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg sk-icon bg-blue-50 dark:bg-blue-900/30">
+                <Fingerprint className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                  Fingerprint sign-in
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {fingerprintEnrolled
+                    ? "Fingerprint is enabled for quicker sign-in."
+                    : "Enroll your device fingerprint for quicker sign-in."}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => void handleEnrollFingerprint()}
+              disabled={enrollingFingerprint || !fingerprintAvailable}
+              className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium sk-btn-primary disabled:opacity-60"
+            >
+              <Fingerprint className="h-4 w-4" />
+              {enrollingFingerprint
+                ? "Waiting for fingerprint..."
+                : fingerprintEnrolled
+                  ? "Enroll another fingerprint"
+                  : "Enroll fingerprint"}
+            </button>
+            {!fingerprintAvailable && (
+              <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+                Fingerprint enrollment is not available on this device.
+              </p>
+            )}
           </div>
         </div>
       </div>

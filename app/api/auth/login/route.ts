@@ -1,4 +1,10 @@
 import { assertSameOrigin, jsonError, readJson, requireString } from "@/lib/api";
+import {
+  clearLoginFailures,
+  enforceLoginRateLimit,
+  recordLoginFailure,
+} from "@/lib/login-rate-limit";
+import { clientKey } from "@/lib/rate-limit";
 import { AuthError, claimStoreOwner, createSession } from "@/lib/session";
 
 interface LoginBody {
@@ -42,6 +48,49 @@ function mapFirebaseError(message?: string): AuthError {
   return new AuthError(401, "Invalid email or password.", "INVALID_CREDENTIALS");
 }
 
+async function signInWithPassword(
+  apiKey: string,
+  email: string,
+  password: string
+): Promise<{ response: Response; data: IdentityToolkitResponse | null }> {
+  const url = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${encodeURIComponent(
+    apiKey
+  )}`;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          password,
+          returnSecureToken: true,
+        }),
+        cache: "no-store",
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (response.status < 500 || attempt === 1) {
+        const data = (await response.json().catch(() => null)) as
+          | IdentityToolkitResponse
+          | null;
+        return { response, data };
+      }
+    } catch {
+      if (attempt === 1) {
+        break;
+      }
+    }
+  }
+
+  throw new AuthError(
+    503,
+    "Sign-in is temporarily unavailable. Please try again.",
+    "AUTH_UNAVAILABLE"
+  );
+}
+
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
@@ -62,29 +111,21 @@ export async function POST(request: Request) {
       );
     }
 
-    const response = await fetch(
-      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${encodeURIComponent(
-        apiKey
-      )}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          password: body.password,
-          returnSecureToken: true,
-        }),
-        cache: "no-store",
-      }
+    const ip = clientKey(request);
+    await enforceLoginRateLimit(email, ip);
+
+    const { response, data } = await signInWithPassword(
+      apiKey,
+      email,
+      body.password
     );
 
-    const data = (await response
-      .json()
-      .catch(() => null)) as IdentityToolkitResponse | null;
-
     if (!response.ok || !data?.localId) {
+      await recordLoginFailure(email, ip);
       throw mapFirebaseError(data?.error?.message);
     }
+
+    await clearLoginFailures(email, ip);
 
     if (!(await claimStoreOwner(data.localId))) {
       throw new AuthError(
@@ -102,6 +143,9 @@ export async function POST(request: Request) {
     await createSession(user);
     return Response.json({ user });
   } catch (error) {
-    return jsonError(error);
+    return jsonError(
+      error,
+      "Sign-in is temporarily unavailable. Please try again."
+    );
   }
 }

@@ -2,8 +2,11 @@ import "server-only";
 
 import { AuthError } from "./session";
 
-export function jsonError(error: unknown, fallback = "Request failed."): Response {
-  if (error instanceof AuthError && error.status < 500) {
+export function jsonError(
+  error: unknown,
+  fallback = "Something went wrong. Please try again."
+): Response {
+  if (error instanceof AuthError) {
     return Response.json(
       { error: error.message, code: error.code },
       { status: error.status }

@@ -8,7 +8,6 @@ import {
   Package,
   ShoppingCart,
   Settings,
-  Wrench,
   LogOut,
   Menu,
   X,
@@ -25,7 +24,6 @@ const sidebarLinks: SidebarLink[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/products", label: "Products", icon: Package },
   { href: "/dashboard/sales", label: "Sales", icon: ShoppingCart },
-  { href: "/dashboard/repairs", label: "Repairs", icon: Wrench },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 

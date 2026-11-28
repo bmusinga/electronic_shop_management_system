@@ -1,3 +1,13 @@
+function defaultErrorMessage(status: number): string {
+  if (status === 429) {
+    return "Too many requests. Please try again later.";
+  }
+  if (status >= 500) {
+    return "The server is temporarily unavailable. Please try again.";
+  }
+  return "The request could not be completed. Please try again.";
+}
+
 export async function apiFetch<T>(
   input: string,
   init?: RequestInit
@@ -12,7 +22,15 @@ export async function apiFetch<T>(
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(input, { ...init, headers });
+  let response: Response;
+  try {
+    response = await fetch(input, { ...init, headers });
+  } catch {
+    throw new Error(
+      "Unable to reach the server. Check your connection and try again."
+    );
+  }
+
   const data = (await response.json().catch(() => null)) as
     | { error?: string }
     | T
@@ -25,7 +43,7 @@ export async function apiFetch<T>(
       "error" in data &&
       typeof data.error === "string"
         ? data.error
-        : "Request failed.";
+        : defaultErrorMessage(response.status);
     throw new Error(message);
   }
 

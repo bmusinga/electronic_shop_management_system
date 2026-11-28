@@ -90,7 +90,12 @@ export function authErrorResponse(error: unknown): Response {
   }
 
   return Response.json(
-    { error: error instanceof Error ? error.message : "Request failed." },
+    {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Something went wrong. Please try again.",
+    },
     { status: 500 }
   );
 }

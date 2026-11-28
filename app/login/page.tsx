@@ -1,15 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { apiFetch } from "@/lib/client-api";
-import { Eye, EyeOff, ArrowLeft, AlertCircle } from "lucide-react";
+import { isFingerprintAvailable } from "@/lib/webauthn-client";
+import {
+  Eye,
+  EyeOff,
+  ArrowLeft,
+  AlertCircle,
+  Fingerprint,
+} from "lucide-react";
 import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { loading, signIn } = useAuth();
+  const { loading, signIn, signInWithFingerprint } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,8 +24,20 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [signingIn, setSigningIn] = useState(false);
+  const [fingerprinting, setFingerprinting] = useState(false);
+  const [fingerprintAvailable, setFingerprintAvailable] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    isFingerprintAvailable().then((available) => {
+      if (active) setFingerprintAvailable(available);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -35,6 +54,22 @@ export default function LoginPage() {
       );
     } finally {
       setSigningIn(false);
+    }
+  };
+
+  const handleFingerprintSignIn = async () => {
+    setError("");
+    setFingerprinting(true);
+    try {
+      await signInWithFingerprint();
+      setRedirecting(true);
+      router.push("/dashboard");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Fingerprint sign-in failed."
+      );
+    } finally {
+      setFingerprinting(false);
     }
   };
 
@@ -165,11 +200,37 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={signingIn}
+            disabled={signingIn || fingerprinting}
             className="w-full rounded-xl py-3 font-semibold sk-btn-primary"
           >
             {signingIn ? "Signing in..." : "Sign In"}
           </button>
+
+          <div className="flex items-center gap-3 pt-1">
+            <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+            <span className="text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">
+              or
+            </span>
+            <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void handleFingerprintSignIn()}
+            disabled={signingIn || fingerprinting || !fingerprintAvailable}
+            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#122b4a] py-3 font-semibold text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-100 dark:hover:bg-[#18365a] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <span className="inline-flex items-center justify-center gap-2">
+              <Fingerprint className="w-5 h-5" />
+              {fingerprinting ? "Waiting for fingerprint..." : "Sign in with fingerprint"}
+            </span>
+          </button>
+
+          {!fingerprintAvailable && (
+            <p className="text-center text-xs text-slate-400 dark:text-slate-500">
+              Fingerprint sign-in is not available on this device.
+            </p>
+          )}
         </form>
 
         <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">

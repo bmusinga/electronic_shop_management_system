@@ -5,9 +5,14 @@ import {
   type DocumentSnapshot,
 } from "firebase-admin/firestore";
 import { getAdminDb } from "./firebase-admin";
+import {
+  applyAttemptFailure,
+  LOGIN_WINDOW_MS,
+} from "./login-rate-limit-core.ts";
 import type {
   ContactMessage,
   ContactMessageInput,
+  LoginAttemptRecord,
   Product,
   ProductInput,
   RepairBooking,
@@ -16,12 +21,17 @@ import type {
   Sale,
   SaleInput,
   SettingsData,
+  WebAuthnChallengeRecord,
+  WebAuthnCredentialRecord,
 } from "./types";
 
 const PRODUCTS_COLLECTION = "products";
 const MESSAGES_COLLECTION = "messages";
 const SALES_COLLECTION = "sales";
 const REPAIRS_COLLECTION = "repairs";
+const LOGIN_ATTEMPTS_COLLECTION = "loginAttempts";
+const WEBAUTHN_CHALLENGES_COLLECTION = "webauthnChallenges";
+const WEBAUTHN_CREDENTIALS_COLLECTION = "webauthnCredentials";
 const SESSION_VERSIONS_COLLECTION = "sessionVersions";
 const SETTINGS_DOC = "settings/admin";
 const OWNER_DOC = "settings/owner";
@@ -405,4 +415,99 @@ export async function updateRepairStatus(
     .collection(REPAIRS_COLLECTION)
     .doc(id)
     .update({ status, updatedAt: now() });
+}
+
+export async function getLoginAttempts(
+  key: string
+): Promise<LoginAttemptRecord | null> {
+  const snapshot = await getAdminDb()
+    .doc(`${LOGIN_ATTEMPTS_COLLECTION}/${key}`)
+    .get();
+  return snapshot.exists ? (snapshot.data() as LoginAttemptRecord) : null;
+}
+
+export async function incrementLoginAttempts(key: string): Promise<void> {
+  const db = getAdminDb();
+  const ref = db.doc(`${LOGIN_ATTEMPTS_COLLECTION}/${key}`);
+  await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    const record = snapshot.exists
+      ? (snapshot.data() as LoginAttemptRecord)
+      : null;
+    transaction.set(
+      ref,
+      applyAttemptFailure(record, Date.now(), LOGIN_WINDOW_MS)
+    );
+  });
+}
+
+export async function clearLoginAttempts(key: string): Promise<void> {
+  await getAdminDb()
+    .doc(`${LOGIN_ATTEMPTS_COLLECTION}/${key}`)
+    .delete();
+}
+
+export async function saveWebAuthnChallenge(
+  challengeId: string,
+  record: WebAuthnChallengeRecord
+): Promise<void> {
+  await getAdminDb()
+    .doc(`${WEBAUTHN_CHALLENGES_COLLECTION}/${challengeId}`)
+    .set(record);
+}
+
+export async function getWebAuthnChallenge(
+  challengeId: string
+): Promise<WebAuthnChallengeRecord | null> {
+  const snapshot = await getAdminDb()
+    .doc(`${WEBAUTHN_CHALLENGES_COLLECTION}/${challengeId}`)
+    .get();
+  return snapshot.exists
+    ? (snapshot.data() as WebAuthnChallengeRecord)
+    : null;
+}
+
+export async function deleteWebAuthnChallenge(challengeId: string): Promise<void> {
+  await getAdminDb()
+    .doc(`${WEBAUTHN_CHALLENGES_COLLECTION}/${challengeId}`)
+    .delete();
+}
+
+export async function saveWebAuthnCredential(
+  record: WebAuthnCredentialRecord
+): Promise<void> {
+  await getAdminDb()
+    .doc(`${WEBAUTHN_CREDENTIALS_COLLECTION}/${record.credentialId}`)
+    .set(record);
+}
+
+export async function getWebAuthnCredential(
+  credentialId: string
+): Promise<WebAuthnCredentialRecord | null> {
+  const snapshot = await getAdminDb()
+    .doc(`${WEBAUTHN_CREDENTIALS_COLLECTION}/${credentialId}`)
+    .get();
+  return snapshot.exists
+    ? (snapshot.data() as WebAuthnCredentialRecord)
+    : null;
+}
+
+export async function listWebAuthnCredentials(
+  uid?: string
+): Promise<WebAuthnCredentialRecord[]> {
+  let query = getAdminDb().collection(WEBAUTHN_CREDENTIALS_COLLECTION);
+  if (uid) {
+    query = query.where("uid", "==", uid) as typeof query;
+  }
+  const snapshot = await query.get();
+  return snapshot.docs.map((doc) => doc.data() as WebAuthnCredentialRecord);
+}
+
+export async function updateWebAuthnCredentialSignCount(
+  credentialId: string,
+  signCount: number
+): Promise<void> {
+  await getAdminDb()
+    .doc(`${WEBAUTHN_CREDENTIALS_COLLECTION}/${credentialId}`)
+    .update({ signCount, updatedAt: now() });
 }

@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/client-api";
+import { signInWithFingerprint as fingerprintSignIn } from "@/lib/webauthn-client";
 
 export interface AuthUser {
   uid: string;
@@ -20,6 +21,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
+  signInWithFingerprint: () => Promise<void>;
   signOut: () => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
@@ -63,6 +65,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   }, []);
 
+  const signInWithFingerprint = useCallback(async () => {
+    const result = await fingerprintSignIn();
+    setUser(result.user);
+  }, []);
+
   const signOut = useCallback(async () => {
     await apiFetch<{ ok: boolean }>("/api/auth/logout", { method: "POST" });
     setUser(null);
@@ -81,7 +88,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, signIn, signOut, changePassword }}
+      value={{
+        user,
+        loading,
+        signIn,
+        signInWithFingerprint,
+        signOut,
+        changePassword,
+      }}
     >
       {children}
     </AuthContext.Provider>
